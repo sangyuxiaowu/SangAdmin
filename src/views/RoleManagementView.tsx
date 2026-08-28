@@ -41,13 +41,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
     permissions: ['dashboard:view'] as PermissionCode[]
   });
 
-  if (!hasPermission('role:view')) {
-    return <AccessDeniedView requiredPermission="role:view" onNavigate={onNavigate} />;
+  if (!hasPermission('roles.read')) {
+    return <AccessDeniedView requiredPermission="roles.read" onNavigate={onNavigate} />;
   }
 
   const handleCreateRole = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasPermission('role:create')) {
+    if (!hasPermission('roles.create')) {
       showAlert({
         title: '权限拦截',
         message: '权限不足：无法创建新角色',
@@ -73,7 +73,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
   };
 
   const handleTogglePermission = (roleId: string, permCode: PermissionCode) => {
-    if (!hasPermission('role:edit')) {
+    if (!hasPermission('roles.update')) {
       showAlert({
         title: '权限拦截',
         message: '权限不足：无法编辑角色权限',
@@ -109,7 +109,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
   };
 
   const handleCloneRole = (role: Role) => {
-    if (!hasPermission('role:create')) return;
+    if (!hasPermission('roles.create')) return;
     addRole({
       code: `${role.code}_copy`,
       name: `${role.name} (副本)`,
@@ -125,7 +125,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
   };
 
   const handleDeleteRole = (role: Role) => {
-    if (!hasPermission('role:delete')) {
+    if (!hasPermission('roles.delete')) {
       showAlert({
         title: '权限拦截',
         message: '权限不足：无法删除角色',
@@ -199,7 +199,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
           </p>
         </div>
 
-        {hasPermission('role:create') && (
+        {hasPermission('roles.create') && (
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-500/20 transition-all"
@@ -269,7 +269,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
               <span className="text-[10px] text-slate-400">更新于 {role.updatedAt}</span>
 
               <div className="flex items-center space-x-1">
-                {hasPermission('role:create') && (
+                {hasPermission('roles.create') && (
                   <button
                     onClick={() => handleCloneRole(role)}
                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
@@ -279,7 +279,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                   </button>
                 )}
 
-                {hasPermission('role:edit') && (
+                {hasPermission('roles.update') && (
                   <button
                     onClick={() => setEditingRole({ ...role })}
                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
@@ -289,7 +289,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                   </button>
                 )}
 
-                {hasPermission('role:delete') && !role.isSystem && (
+                {hasPermission('roles.delete') && !role.isSystem && (
                   <button
                     onClick={() => handleDeleteRole(role)}
                     className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 transition-colors"

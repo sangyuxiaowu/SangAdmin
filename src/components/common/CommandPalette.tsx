@@ -65,7 +65,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       category: '页面导航',
       path: '/users',
       icon: User,
-      permission: 'user:view'
+      permission: 'users.read'
     },
     {
       id: 'nav-org',
@@ -81,7 +81,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       category: '页面导航',
       path: '/roles',
       icon: Shield,
-      permission: 'role:view'
+      permission: 'roles.read'
     },
     {
       id: 'nav-permissions',
@@ -89,7 +89,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       category: '页面导航',
       path: '/permissions',
       icon: Shield,
-      permission: 'permission:manage'
+      permission: 'permissions.read'
     },
     {
       id: 'nav-profile',

@@ -64,7 +64,7 @@ export function hasAnyPermission(
   userPermissions: PermissionCode[],
   required: PermissionCode[]
 ): boolean {
-  if (userPermissions.includes('system:config') || userPermissions.includes('permission:manage')) {
+  if (userPermissions.includes('system:config') || userPermissions.includes('permissions.read')) {
     return true;
   }
   return required.some(code => userPermissions.includes(code));

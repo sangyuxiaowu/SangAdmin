@@ -299,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>个人信息与安全</span>
                 </button>
 
-                {hasPermission('permission:manage') && (
+                {hasPermission('permissions.read') && (
                   <button
                     onClick={() => {
                       onNavigate('/permissions');

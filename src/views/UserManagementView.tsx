@@ -66,8 +66,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     bio: ''
   });
 
-  if (!hasPermission('user:view')) {
-    return <AccessDeniedView requiredPermission="user:view" onNavigate={onNavigate} />;
+  if (!hasPermission('users.read')) {
+    return <AccessDeniedView requiredPermission="users.read" onNavigate={onNavigate} />;
   }
 
   // Filtering users
@@ -86,7 +86,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
   const handleSaveNewUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasPermission('user:create')) {
+    if (!hasPermission('users.create')) {
       showAlert({
         title: '权限拦截',
         message: '权限不足：当前角色账号无法创建新用户',
@@ -122,7 +122,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
   const handleSaveEditUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser || !hasPermission('user:edit')) return;
+    if (!editingUser || !hasPermission('users.update')) return;
 
     updateUser(editingUser.id, editingUser);
     addActivityLog('更新用户', `修改了用户【${editingUser.name}】的组织架构与角色`, 'info');
@@ -135,7 +135,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   };
 
   const handleToggleStatus = (user: User) => {
-    if (!hasPermission('user:edit')) {
+    if (!hasPermission('users.update')) {
       showAlert({
         title: '权限不足',
         message: '权限不足：无法修改用户状态',
@@ -153,7 +153,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   };
 
   const handleDelete = (user: User) => {
-    if (!hasPermission('user:delete')) {
+    if (!hasPermission('users.delete')) {
       showAlert({
         title: '权限不足',
         message: '权限不足：无法删除用户账号',
@@ -196,7 +196,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
           </p>
         </div>
 
-        {hasPermission('user:create') && (
+        {hasPermission('users.create') && (
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-500/20 transition-all"
@@ -321,7 +321,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-1">
-                        {hasPermission('user:edit') && (
+                        {hasPermission('users.update') && (
                           <>
                             <button
                               onClick={() => setEditingUser({ ...user })}
@@ -353,7 +353,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                           </>
                         )}
 
-                        {hasPermission('user:delete') && (
+                        {hasPermission('users.delete') && (
                           <button
                             onClick={() => handleDelete(user)}
                             className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 transition-colors"

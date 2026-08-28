@@ -28,8 +28,8 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  if (!hasPermission('permission:manage')) {
-    return <AccessDeniedView requiredPermission="permission:manage" onNavigate={onNavigate} />;
+  if (!hasPermission('permissions.read')) {
+    return <AccessDeniedView requiredPermission="permissions.read" onNavigate={onNavigate} />;
   }
 
   const categories = Array.from(new Set(ALL_PERMISSIONS.map(p => p.category)));

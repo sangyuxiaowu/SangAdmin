@@ -26,25 +26,25 @@ export const ALL_PERMISSIONS: PermissionNode[] = [
     category: '数据分析'
   },
   {
-    code: 'user:view',
+    code: 'users.read',
     name: '查看用户列表',
     description: '允许浏览系统用户基本信息',
     category: '用户管理'
   },
   {
-    code: 'user:create',
+    code: 'users.create',
     name: '新建用户',
     description: '允许添加新后台账号',
     category: '用户管理'
   },
   {
-    code: 'user:edit',
+    code: 'users.update',
     name: '编辑用户',
     description: '允许修改用户信息及分配角色',
     category: '用户管理'
   },
   {
-    code: 'user:delete',
+    code: 'users.delete',
     name: '删除/冻结用户',
     description: '允许移除或封禁违规账号',
     category: '用户管理'
@@ -62,31 +62,31 @@ export const ALL_PERMISSIONS: PermissionNode[] = [
     category: '机构管理'
   },
   {
-    code: 'role:view',
+    code: 'roles.read',
     name: '查看角色列表',
     description: '允许浏览系统角色定义',
     category: '角色权限'
   },
   {
-    code: 'role:create',
+    code: 'roles.create',
     name: '创建自定义角色',
     description: '允许新建角色模板',
     category: '角色权限'
   },
   {
-    code: 'role:edit',
+    code: 'roles.update',
     name: '编辑角色',
     description: '允许修改角色基本信息',
     category: '角色权限'
   },
   {
-    code: 'role:delete',
+    code: 'roles.delete',
     name: '删除角色',
     description: '允许删除非系统内置角色',
     category: '角色权限'
   },
   {
-    code: 'permission:manage',
+    code: 'permissions.read',
     name: '分配权限矩阵',
     description: '允许配置角色与权限映射节点',
     category: '角色权限'
@@ -134,9 +134,9 @@ export const DEFAULT_ROLES: Role[] = [
     updatedAt: '2026-06-15',
     permissions: [
       'dashboard:view', 'dashboard:export',
-      'user:view', 'user:create', 'user:edit', 'user:delete',
+      'users.read', 'users.create', 'users.update', 'users.delete',
       'org:view', 'org:manage',
-      'role:view',
+      'roles.read',
       'system:view', 'system:config', 'audit:view'
     ]
   },
@@ -167,7 +167,7 @@ export const DEFAULT_ROLES: Role[] = [
     permissions: [
       'dashboard:view',
       'analytics:view',
-      'user:view'
+      'users.read'
     ]
   },
   {

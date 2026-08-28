@@ -26,7 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
         title: '用户账号管理',
         icon: 'Users',
         path: '/users',
-        permission: 'user:view'
+        permission: 'users.read'
       },
       {
         id: 'org',
@@ -40,14 +40,14 @@ export const NAV_ITEMS: NavItem[] = [
         title: '角色模型配置',
         icon: 'UserCheck',
         path: '/roles',
-        permission: 'role:view'
+        permission: 'roles.read'
       },
       {
         id: 'permissions',
         title: '权限树分配矩阵',
         icon: 'KeyRound',
         path: '/permissions',
-        permission: 'permission:manage'
+        permission: 'permissions.read'
       }
     ]
   },
