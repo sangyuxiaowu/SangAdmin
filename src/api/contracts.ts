@@ -5,10 +5,10 @@ export interface ApiResponse<T> {
 }
 
 export interface PagedResponse<T> {
-  items: T[];
-  totalCount: number;
-  pageIndex: number;
-  pageSize: number;
+  data: T[];
+  count: number;
+  page: number;
+  size: number;
 }
 
 export interface LoginRequest {

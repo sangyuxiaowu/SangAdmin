@@ -74,8 +74,8 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       api.queryRoles(),
       api.getResources(),
     ]);
-    const loadedRoles = rolesResponse.data.items.map(toRole);
-    const loadedUsers = usersResponse.data.items.map(user => toUser(user, loadedRoles));
+    const loadedRoles = rolesResponse.data.data.map(toRole);
+    const loadedUsers = usersResponse.data.data.map(user => toUser(user, loadedRoles));
     setUsers(loadedUsers);
     setRoles(loadedRoles);
     setAllPermissions(permissionsResponse.data.map(toPermission));
