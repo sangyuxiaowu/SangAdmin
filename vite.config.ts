@@ -3,24 +3,37 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-const apiUrl = process.env.VITE_API_URL ?? 'http://localhost:5069';
+export default defineConfig(({ mode }) => {
+  const apiUrl = process.env.VITE_API_URL ?? 'http://localhost:5069';
+  const useBackend = mode === 'backend';
+  const useMockData = mode === 'mock';
+  const mockDataModule = mode === 'mock'
+    ? path.resolve(__dirname, 'src/data/mockData.ts')
+    : path.resolve(__dirname, 'src/data/emptyMockData.ts');
 
-export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '$mock': mockDataModule,
+        ...(useMockData ? {} : {
+          './data/mockData': path.resolve(__dirname, 'src/data/emptyMockData.ts'),
+          '../data/mockData': path.resolve(__dirname, 'src/data/emptyMockData.ts'),
+          '../../data/mockData': path.resolve(__dirname, 'src/data/emptyMockData.ts'),
+        }),
       },
     },
     server: {
       port: parseInt(process.env.PORT ?? "5173"),
-      proxy: {
-        '/api': {
-          target: apiUrl,
-          changeOrigin: true,
-        },
-      },
+      proxy: useBackend
+        ? {
+            '/api': {
+              target: apiUrl,
+              changeOrigin: true,
+            },
+          }
+        : undefined,
     },
   };
 });

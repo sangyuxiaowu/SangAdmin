@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
-import { ALL_PERMISSIONS } from '../data/mockData';
+import { ALL_PERMISSIONS } from '$mock';
 import type { PermissionCode } from '../types';
 import { AccessDeniedView } from './AccessDeniedView';
 

@@ -15,6 +15,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "$mock": ["src/data/mockData.ts"]
+    },
 
     /* Linting */
     "noUnusedLocals": true,

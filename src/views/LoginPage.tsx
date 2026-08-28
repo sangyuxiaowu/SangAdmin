@@ -25,18 +25,16 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const success = login(username, password);
-      setLoading(false);
-      if (!success) {
-        setError('账号或密码不正确（或者账号处于封禁冻结状态）');
-      }
-    }, 400);
+    const success = await login(username, password);
+    setLoading(false);
+    if (!success) {
+      setError('账号或密码不正确（或者账号处于封禁冻结状态）');
+    }
   };
 
   const handleQuickSelect = (account: string) => {
@@ -131,7 +129,7 @@ export const LoginPage: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">身份凭证密码</label>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">任意填写即可登录</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">请输入有效密码</span>
             </div>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Role, User, PermissionCode, PermissionNode } from '../types';
-import { DEFAULT_ROLES, DEFAULT_USERS, ALL_PERMISSIONS } from '../data/mockData';
+import { DEFAULT_ROLES, DEFAULT_USERS, ALL_PERMISSIONS } from '$mock';
+import { api, getAccessToken } from '../api/client';
+import type { PermissionDto, RoleDto, UserDto } from '../api/contracts';
 
 interface PermissionContextType {
   roles: Role[];
@@ -16,46 +18,77 @@ interface PermissionContextType {
   getRoleById: (id: string) => Role | undefined;
   getRolePermissions: (roleId: string) => PermissionCode[];
   resetToDefaults: () => void;
+  reload: () => Promise<User[]>;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
 
 export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [roles, setRoles] = useState<Role[]>(() => {
-    const saved = localStorage.getItem('sang_roles') || localStorage.getItem('nova_roles');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // fallback
-      }
-    }
-    return DEFAULT_ROLES;
+  const [roles, setRoles] = useState<Role[]>(DEFAULT_ROLES);
+  const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
+  const [allPermissions, setAllPermissions] = useState<PermissionNode[]>(ALL_PERMISSIONS);
+
+  const toRole = (role: RoleDto): Role => ({
+    id: String(role.id),
+    code: role.name,
+    name: role.name,
+    description: '',
+    permissions: role.permissions as PermissionCode[],
+    createdAt: '',
+    updatedAt: '',
   });
 
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('sang_users') || localStorage.getItem('nova_users');
-    if (saved) {
-      try {
-        const parsed: User[] = JSON.parse(saved);
-        return parsed.map(u => ({
-          ...u,
-          email: u.email.replace(/@nova\.com$/i, '@sang.cool')
-        }));
-      } catch {
-        // fallback
-      }
-    }
-    return DEFAULT_USERS;
+  const toUser = (user: UserDto, loadedRoles: Role[]): User => {
+    const roleName = user.roles[0];
+    const role = loadedRoles.find(item => item.name === roleName);
+
+    return {
+    id: String(user.id),
+    username: user.userName,
+    name: user.nickname || user.userName,
+    email: user.email,
+    avatar: '',
+    phone: '',
+    department: '',
+    position: '',
+    roleId: role?.id || '',
+    roleName,
+    status: 'active',
+    lastLogin: '',
+    createdAt: '',
+    };
+  };
+
+  const toPermission = (permission: PermissionDto): PermissionNode => ({
+    code: permission.name as PermissionCode,
+    name: permission.name,
+    description: '',
+    category: '系统配置',
   });
 
-  useEffect(() => {
-    localStorage.setItem('sang_roles', JSON.stringify(roles));
-  }, [roles]);
+  const reload = async (): Promise<User[]> => {
+    if (!getAccessToken()) return [];
+
+    const [usersResponse, rolesResponse, permissionsResponse] = await Promise.all([
+      api.queryUsers(),
+      api.queryRoles(),
+      api.getResources(),
+    ]);
+    const loadedRoles = rolesResponse.data.items.map(toRole);
+    const loadedUsers = usersResponse.data.items.map(user => toUser(user, loadedRoles));
+    setUsers(loadedUsers);
+    setRoles(loadedRoles);
+    setAllPermissions(permissionsResponse.data.map(toPermission));
+    return loadedUsers;
+  };
 
   useEffect(() => {
-    localStorage.setItem('sang_users', JSON.stringify(users));
-  }, [users]);
+    void reload().catch(() => {
+      setUsers([]);
+      setRoles([]);
+      setAllPermissions([]);
+    });
+  }, []);
 
   // Sync role user counts
   useEffect(() => {
@@ -148,8 +181,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const resetToDefaults = () => {
     setRoles(DEFAULT_ROLES);
     setUsers(DEFAULT_USERS);
-    localStorage.removeItem('nova_roles');
-    localStorage.removeItem('nova_users');
+    setAllPermissions(ALL_PERMISSIONS);
   };
 
   return (
@@ -157,7 +189,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       value={{
         roles,
         users,
-        allPermissions: ALL_PERMISSIONS,
+        allPermissions,
         addRole,
         updateRole,
         deleteRole,
@@ -167,7 +199,8 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteUser,
         getRoleById,
         getRolePermissions,
-        resetToDefaults
+        resetToDefaults,
+        reload
       }}
     >
       {children}

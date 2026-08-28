@@ -25,7 +25,7 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
-import { CHART_DATA_RADAR, CHART_DATA_REGIONS } from '../data/mockData';
+import { CHART_DATA_RADAR, CHART_DATA_REGIONS } from '$mock';
 import { useAuth } from '../context/AuthContext';
 import { AccessDeniedView } from './AccessDeniedView';
 

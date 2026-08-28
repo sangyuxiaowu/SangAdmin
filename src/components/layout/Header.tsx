@@ -19,7 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
 import type { ThemeMode } from '../../types';
-import { MOCK_NOTIFICATIONS } from '../../data/mockData';
+import { MOCK_NOTIFICATIONS } from '$mock';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;

@@ -35,7 +35,7 @@ import { useAuth } from '../context/AuthContext';
 import { AccessDeniedView } from './AccessDeniedView';
 import { CustomSelect } from '../components/common/CustomSelect';
 import type { SelectOption } from '../components/common/CustomSelect';
-import { DEFAULT_ORG_TREE, DEFAULT_USERS } from '../data/mockData';
+import { DEFAULT_ORG_TREE, DEFAULT_USERS } from '$mock';
 import type { OrgNode, OrgType, User } from '../types';
 
 // Helper icon & color for OrgType

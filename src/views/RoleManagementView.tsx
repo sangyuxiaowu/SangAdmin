@@ -18,7 +18,7 @@ import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 import type { Role, PermissionCode } from '../types';
-import { ALL_PERMISSIONS } from '../data/mockData';
+import { ALL_PERMISSIONS } from '$mock';
 import { AccessDeniedView } from './AccessDeniedView';
 
 interface RoleManagementViewProps {

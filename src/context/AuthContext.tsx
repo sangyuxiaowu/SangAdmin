@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, PermissionCode, ActivityLog } from '../types';
 import { usePermissions } from './PermissionContext';
-import { MOCK_ACTIVITY_LOGS } from '../data/mockData';
+import { MOCK_ACTIVITY_LOGS } from '$mock';
+import { api, clearAccessToken, getAccessToken } from '../api/client';
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password?: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   switchDemoUser: (userId: string) => void;
   hasPermission: (permissionCode: PermissionCode) => boolean;
@@ -18,10 +19,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, roles, getRolePermissions } = usePermissions();
+  const { users, roles, getRolePermissions, reload } = usePermissions();
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
-    return localStorage.getItem('sang_active_user_id') || localStorage.getItem('nova_active_user_id') || 'usr-1';
+    return localStorage.getItem('sang_active_user_id');
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
@@ -51,27 +52,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentUser = users.find(u => u.id === currentUserId) || null;
   const isAuthenticated = !!currentUser && currentUser.status === 'active';
 
-  const login = (accountInput: string): boolean => {
-    const trimmed = accountInput.trim().toLowerCase();
-    const user = users.find(
-      u =>
-        u.username.toLowerCase() === trimmed ||
-        u.email.toLowerCase() === trimmed ||
-        (trimmed.includes('@sang.cool') && u.username.toLowerCase() === trimmed.replace('@sang.cool', '')) ||
-        (trimmed.includes('@') && u.email.toLowerCase() === trimmed)
-    );
-    if (user && user.status === 'active') {
+  const login = async (accountInput: string, password: string): Promise<boolean> => {
+    try {
+      await api.login({ userName: accountInput.trim(), password });
+      const loadedUsers = await reload();
+      const user = loadedUsers.find(item => item.username.toLowerCase() === accountInput.trim().toLowerCase());
+      if (!user) return false;
       setCurrentUserId(user.id);
-      addActivityLog('用户登录', `用户【${user.name}】(${user.email}) 成功登录系统`, 'success');
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     if (currentUser) {
       addActivityLog('用户退出', `用户【${currentUser.name}】已安全退出系统`, 'info');
     }
+    clearAccessToken();
     setCurrentUserId(null);
   };
 

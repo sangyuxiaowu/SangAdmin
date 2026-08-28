@@ -5,54 +5,7 @@ import type { NotificationTypeFilter } from '../components/business/notification
 import { NotificationListItem } from '../components/business/notifications/NotificationListItem';
 import { NotificationDetailModal } from '../components/business/notifications/NotificationDetailModal';
 import { useModal } from '../context/ModalContext';
-
-const MOCK_NOTIFICATIONS: SystemNotification[] = [
-  {
-    id: 'notif-1',
-    title: '系统级版本升版完成 (v3.5.0-Stable)',
-    message: 'NovaAdmin 已成功完成灰度构建发布，引入了全量轻量级浅色/深色主题适配、组件细粒度拆分与性能提升。',
-    timestamp: '10 分钟前',
-    read: false,
-    type: 'system',
-    link: '/settings',
-  },
-  {
-    id: 'notif-2',
-    title: '高危异地登录风险预警',
-    message: '检测到账号 @lin.yu 尝试从未知 IP (183.192.14.88) 尝试进行 SSH 密钥验证，已被 WAF 安全防护规则阻断。',
-    timestamp: '1 小时前',
-    read: false,
-    type: 'security',
-    link: '/audit',
-  },
-  {
-    id: 'notif-3',
-    title: '待办审批提醒：Redis 集群规格扩容申请',
-    message: '陆天行 发起了生产环境 Redis 集群规格扩容申请 (#WO-20268801)，优先级为 P1，需要您在 24 小时内进行初审。',
-    timestamp: '3 小时前',
-    read: false,
-    type: 'task',
-    link: '/resource-list',
-  },
-  {
-    id: 'notif-4',
-    title: '定期数据库自动快照归档成功',
-    message: 'PostgreSQL 生产库离线冷备文件 snapshot-20260731.sql.gz 已加密上传至多区域存储桶。',
-    timestamp: '12 小时前',
-    read: true,
-    type: 'system',
-    link: '/settings',
-  },
-  {
-    id: 'notif-5',
-    title: 'RBAC 角色权限节点变动通知',
-    message: '角色 [系统运维官] 已新增 [system:config] 细粒度控制权限节点。',
-    timestamp: '昨天 18:30',
-    read: true,
-    type: 'task',
-    link: '/permissions',
-  },
-];
+import { MOCK_NOTIFICATIONS } from '$mock';
 
 interface NotificationsViewProps {
   onNavigate?: (path: string) => void;

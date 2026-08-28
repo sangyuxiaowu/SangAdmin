@@ -33,7 +33,7 @@ import {
   CHART_DATA_TREND,
   CHART_DATA_REGIONS,
   CHART_DATA_DEVICES
-} from '../data/mockData';
+} from '$mock';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
 
