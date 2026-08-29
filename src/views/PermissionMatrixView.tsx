@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyRound,
   ShieldCheck,
   Check,
   X,
   Save,
-  RotateCcw,
   Sparkles,
   Info,
   CheckSquare,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
-import { ALL_PERMISSIONS } from '$mock';
 import type { PermissionCode } from '../types';
 import { AccessDeniedView } from './AccessDeniedView';
 
@@ -22,58 +20,72 @@ interface PermissionMatrixViewProps {
 }
 
 export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNavigate }) => {
-  const { roles, updateRolePermissions, resetToDefaults } = usePermissions();
+  const { roles, allPermissions, saveRole } = usePermissions();
   const { hasPermission, addActivityLog } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [draftPermissions, setDraftPermissions] = useState<Record<string, PermissionCode[]>>({});
+
+  useEffect(() => {
+    setDraftPermissions(Object.fromEntries(roles.map(role => [role.id, role.permissions])));
+  }, [roles]);
 
   if (!hasPermission('permissions.read')) {
     return <AccessDeniedView requiredPermission="permissions.read" onNavigate={onNavigate} />;
   }
 
-  const categories = Array.from(new Set(ALL_PERMISSIONS.map(p => p.category)));
+  const categories = Array.from(new Set(allPermissions.map(p => p.category)));
 
-  const filteredPermissions = ALL_PERMISSIONS.filter(
+  const filteredPermissions = allPermissions.filter(
     p => activeCategory === 'all' || p.category === activeCategory
   );
 
   const handleCellToggle = (roleId: string, permCode: PermissionCode) => {
     const role = roles.find(r => r.id === roleId);
-    if (!role) return;
+    if (!role || role.isAdministrator) return;
 
-    const exists = role.permissions.includes(permCode);
+    const permissions = draftPermissions[roleId] ?? role.permissions;
+    const exists = permissions.includes(permCode);
     const updated = exists
-      ? role.permissions.filter(p => p !== permCode)
-      : [...role.permissions, permCode];
+      ? permissions.filter(p => p !== permCode)
+      : [...permissions, permCode];
 
-    updateRolePermissions(roleId, updated);
+    setDraftPermissions(current => ({ ...current, [roleId]: updated }));
   };
 
   const handleToggleCategoryForRole = (roleId: string, category: string) => {
     const role = roles.find(r => r.id === roleId);
     if (!role) return;
 
-    const categoryPermCodes = ALL_PERMISSIONS.filter(p => p.category === category).map(p => p.code);
-    const allSelected = categoryPermCodes.every(code => role.permissions.includes(code));
+    const permissions = draftPermissions[roleId] ?? role.permissions;
+    const categoryPermCodes = allPermissions.filter(p => p.category === category).map(p => p.code);
+    const allSelected = categoryPermCodes.every(code => permissions.includes(code));
 
     let updated: PermissionCode[];
     if (allSelected) {
       // Remove all category codes
-      updated = role.permissions.filter(code => !categoryPermCodes.includes(code));
+      updated = permissions.filter(code => !categoryPermCodes.includes(code));
     } else {
       // Add all missing category codes
-      const set = new Set([...role.permissions, ...categoryPermCodes]);
+      const set = new Set([...permissions, ...categoryPermCodes]);
       updated = Array.from(set);
     }
 
-    updateRolePermissions(roleId, updated);
+    setDraftPermissions(current => ({ ...current, [roleId]: updated }));
   };
 
-  const handleSaveAll = () => {
-    addActivityLog('权限矩阵更新', '保存全站角色与权限关联矩阵配置', 'success');
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+  const handleSaveAll = async () => {
+    try {
+      await Promise.all(roles.filter(role => !role.isAdministrator).map(role =>
+        saveRole({ ...role, permissions: draftPermissions[role.id] ?? role.permissions })
+      ));
+      addActivityLog('权限矩阵更新', '保存全站角色与权限关联矩阵配置', 'success');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch {
+      setSaveSuccess(false);
+    }
   };
 
   return (
@@ -94,15 +106,6 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={resetToDefaults}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium text-xs transition-colors flex items-center gap-1.5"
-            title="还原初始内置数据"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>重置为预设节点</span>
-          </button>
-
-          <button
             onClick={handleSaveAll}
             className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1.5"
           >
@@ -122,7 +125,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          全模块节点 ({ALL_PERMISSIONS.length})
+          全模块节点 ({allPermissions.length})
         </button>
         {categories.map(cat => (
           <button
@@ -156,7 +159,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
                     <div className="flex flex-col items-center">
                       <span className="text-slate-900 dark:text-slate-100">{role.name}</span>
                       <span className="text-[10px] text-slate-400 font-mono font-normal">
-                        ({role.permissions.length} 节点)
+                        ({(draftPermissions[role.id] ?? role.permissions).length} 节点)
                       </span>
                     </div>
                   </th>
@@ -183,12 +186,12 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
 
                   {/* Role Checkboxes Matrix */}
                   {roles.map(role => {
-                    const isGranted = role.permissions.includes(perm.code);
+                    const isGranted = (draftPermissions[role.id] ?? role.permissions).includes(perm.code);
                     return (
                       <td
                         key={role.id}
                         onClick={() => handleCellToggle(role.id, perm.code)}
-                        className="py-3 px-4 text-center cursor-pointer border-r border-slate-100 dark:border-slate-800/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30 transition-colors"
+                        className={`py-3 px-4 text-center border-r border-slate-100 dark:border-slate-800/40 transition-colors ${role.isAdministrator ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30'}`}
                       >
                         <div className="inline-flex items-center justify-center">
                           {isGranted ? (

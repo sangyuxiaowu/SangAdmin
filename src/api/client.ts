@@ -1,10 +1,27 @@
-import type { ApiResponse, LoginRequest, LoginResponse, PagedResponse, PermissionDto, RoleDto, UserDto } from './contracts';
+import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, PermissionDto, RoleDto, UpdateRoleRequest, UpdateUserRequest, UserDto } from './contracts';
 
 const accessTokenKey = 'sang_access_token';
 const isMockMode = import.meta.env.MODE === 'mock';
 
 export const getAccessToken = () => localStorage.getItem(accessTokenKey);
 export const clearAccessToken = () => localStorage.removeItem(accessTokenKey);
+
+interface ValidationError {
+  field?: string;
+  err?: string[];
+}
+
+interface ErrorResponse {
+  msg?: string;
+  data?: ValidationError[];
+}
+
+const getErrorMessage = (response: ErrorResponse, status: number) => {
+  const validationErrors = response.data
+    ?.flatMap(item => item.err?.map(message => item.field ? `${item.field}: ${message}` : message) ?? []);
+
+  return validationErrors?.length ? validationErrors.join('\n') : response.msg || `请求失败（${status}）`;
+};
 
 const request = async <T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> => {
   const token = getAccessToken();
@@ -18,7 +35,8 @@ const request = async <T>(path: string, init?: RequestInit): Promise<ApiResponse
   });
 
   if (!response.ok) {
-    throw new Error(`请求失败（${response.status}）`);
+    const error = await response.json().catch(() => ({})) as ErrorResponse;
+    throw new Error(getErrorMessage(error, response.status));
   }
 
   const result = await response.json() as ApiResponse<T>;
@@ -60,5 +78,36 @@ export const api = {
     return isMockMode
       ? (await import('./mockApi')).mockApi.getResources()
       : request<PermissionDto[]>('/api/permissions/resources');
+  },
+
+  createUser(requestBody: CreateUserRequest): Promise<ApiResponse<UserDto>> {
+    return request<UserDto>('/api/users', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
+
+  updateUser(id: string, requestBody: UpdateUserRequest): Promise<ApiResponse<UserDto>> {
+    return request<UserDto>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+
+  deleteUser(id: string): Promise<ApiResponse<object>> {
+    return request<object>(`/api/users/${id}`, { method: 'DELETE' });
+  },
+
+  changePassword(id: string, newPassword: string, currentPassword?: string): Promise<ApiResponse<object>> {
+    return request<object>(`/api/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword, currentPassword }),
+    });
+  },
+
+  createRole(requestBody: CreateRoleRequest): Promise<ApiResponse<RoleDto>> {
+    return request<RoleDto>('/api/roles', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
+
+  updateRole(id: string, requestBody: UpdateRoleRequest): Promise<ApiResponse<RoleDto>> {
+    return request<RoleDto>(`/api/roles/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+
+  deleteRole(id: string): Promise<ApiResponse<object>> {
+    return request<object>(`/api/roles/${id}`, { method: 'DELETE' });
   },
 };

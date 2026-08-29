@@ -57,7 +57,7 @@ export interface Role {
   name: string;
   description: string;
   permissions: PermissionCode[];
-  isSystem?: boolean; // System roles cannot be deleted
+  isAdministrator?: boolean;
   userCount?: number;
   createdAt: string;
   updatedAt: string;

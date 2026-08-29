@@ -28,6 +28,9 @@ const toUserDto = (user: (typeof DEFAULT_USERS)[number]): UserDto => ({
   nickname: user.name,
   email: user.email,
   emailConfirmed: true,
+  phoneNumber: user.phone,
+  lastLoginAt: user.lastLogin,
+  isEnabled: user.status === 'active',
   roles: user.roleName ? [user.roleName] : [],
   permissions: DEFAULT_ROLES.find(role => role.id === user.roleId)?.permissions ?? [],
 });
@@ -36,9 +39,21 @@ const users = DEFAULT_USERS.map(toUserDto);
 const roles: RoleDto[] = DEFAULT_ROLES.map(role => ({
   id: Number(role.id.replace('role-', '').replace('superadmin', '1').replace('sysadmin', '2').replace('analyst', '3').replace('editor', '4').replace('guest', '5')),
   name: role.name,
+  displayName: role.name,
+  description: role.description,
+  createdAt: role.createdAt,
+  updatedAt: role.updatedAt,
+  userCount: DEFAULT_USERS.filter(user => user.roleId === role.id).length,
+  isAdministrator: Boolean(role.isAdministrator),
   permissions: role.permissions,
 }));
-const resources: PermissionDto[] = ALL_PERMISSIONS.map(permission => ({ name: permission.code }));
+const resources: PermissionDto[] = ALL_PERMISSIONS.map(permission => ({
+  name: permission.code,
+  resourceKey: permission.category,
+  resourceName: permission.category,
+  actionKey: permission.code,
+  description: permission.name,
+}));
 
 export const mockApi = {
   login(request: LoginRequest): ApiResponse<LoginResponse> {
@@ -55,19 +70,19 @@ export const mockApi = {
 
   queryUsers(pageIndex = 1, pageSize = 10): ApiResponse<PagedResponse<UserDto>> {
     return success({
-      items: users.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
-      totalCount: users.length,
-      pageIndex,
-      pageSize,
+      data: users.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
+      count: users.length,
+      page: pageIndex,
+      size: pageSize,
     });
   },
 
   queryRoles(pageIndex = 1, pageSize = 10): ApiResponse<PagedResponse<RoleDto>> {
     return success({
-      items: roles.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
-      totalCount: roles.length,
-      pageIndex,
-      pageSize,
+      data: roles.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
+      count: roles.length,
+      page: pageIndex,
+      size: pageSize,
     });
   },
 

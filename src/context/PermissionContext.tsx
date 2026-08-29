@@ -12,12 +12,19 @@ interface PermissionContextType {
   updateRole: (id: string, updates: Partial<Role>) => void;
   deleteRole: (id: string) => boolean;
   updateRolePermissions: (roleId: string, permissions: PermissionCode[]) => void;
+  saveRole: (role: Role) => Promise<void>;
   addUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => void;
+  createUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => void;
+  saveUser: (user: User) => Promise<void>;
   deleteUser: (id: string) => void;
+  removeUser: (id: string) => Promise<void>;
+  resetUserPassword: (id: string, password: string, currentPassword: string) => Promise<void>;
   getRoleById: (id: string) => Role | undefined;
   getRolePermissions: (roleId: string) => PermissionCode[];
   resetToDefaults: () => void;
+  createRole: (name: string, permissions: PermissionCode[]) => Promise<void>;
+  removeRole: (id: string) => Promise<void>;
   reload: () => Promise<User[]>;
 }
 
@@ -31,16 +38,18 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const toRole = (role: RoleDto): Role => ({
     id: String(role.id),
     code: role.name,
-    name: role.name,
-    description: '',
+    name: role.displayName,
+    description: role.description,
     permissions: role.permissions as PermissionCode[],
-    createdAt: '',
-    updatedAt: '',
+    isAdministrator: role.isAdministrator,
+    userCount: role.userCount,
+    createdAt: role.createdAt.startsWith('0001-') ? '' : role.createdAt,
+    updatedAt: role.updatedAt.startsWith('0001-') ? '' : role.updatedAt,
   });
 
   const toUser = (user: UserDto, loadedRoles: Role[]): User => {
-    const roleName = user.roles[0];
-    const role = loadedRoles.find(item => item.name === roleName);
+    const roleCode = user.roles[0];
+    const role = loadedRoles.find(item => item.code === roleCode);
 
     return {
     id: String(user.id),
@@ -48,22 +57,22 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     name: user.nickname || user.userName,
     email: user.email,
     avatar: '',
-    phone: '',
+    phone: user.phoneNumber ?? '',
     department: '',
     position: '',
     roleId: role?.id || '',
-    roleName,
-    status: 'active',
-    lastLogin: '',
+    roleName: role?.name ?? roleCode,
+    status: user.isEnabled ? 'active' : 'suspended',
+    lastLogin: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '-',
     createdAt: '',
     };
   };
 
   const toPermission = (permission: PermissionDto): PermissionNode => ({
     code: permission.name as PermissionCode,
-    name: permission.name,
-    description: '',
-    category: '系统配置',
+    name: permission.description || permission.name,
+    description: permission.description,
+    category: permission.resourceName as PermissionNode['category'],
   });
 
   const reload = async (): Promise<User[]> => {
@@ -90,16 +99,6 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   }, []);
 
-  // Sync role user counts
-  useEffect(() => {
-    setRoles(prevRoles =>
-      prevRoles.map(role => {
-        const count = users.filter(u => u.roleId === role.id).length;
-        return { ...role, userCount: count };
-      })
-    );
-  }, [users.length]);
-
   const addRole = (roleData: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>) => {
     const now = new Date().toISOString().split('T')[0];
     const newRole: Role = {
@@ -121,7 +120,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const deleteRole = (id: string): boolean => {
     const roleToDelete = roles.find(r => r.id === id);
-    if (roleToDelete?.isSystem) return false;
+    if (roleToDelete?.isAdministrator) return false;
     const isUsed = users.some(u => u.roleId === id);
     if (isUsed) return false;
 
@@ -136,6 +135,15 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
   };
 
+  const saveRole = async (role: Role) => {
+    await api.updateRole(role.id, {
+      displayName: role.name,
+      description: role.description,
+      permissions: role.permissions,
+    });
+    await reload();
+  };
+
   const addUser = (userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => {
     const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
     const role = roles.find(r => r.id === userData.roleId);
@@ -147,6 +155,21 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       lastLogin: now
     };
     setUsers(prev => [newUser, ...prev]);
+  };
+
+  const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string) => {
+    const role = roles.find(item => item.id === userData.roleId);
+    await api.createUser({
+      userName: userData.username,
+      nickname: userData.name,
+      email: userData.email,
+      phoneNumber: userData.phone,
+      password,
+      isEnabled: userData.status === 'active',
+      roles: role ? [role.code] : [],
+      permissions: [],
+    });
+    await reload();
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
@@ -165,8 +188,30 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
   };
 
+  const saveUser = async (user: User) => {
+    const role = roles.find(item => item.id === user.roleId);
+    await api.updateUser(user.id, {
+      nickname: user.name,
+      email: user.email,
+      phoneNumber: user.phone,
+      isEnabled: user.status === 'active',
+      roles: role ? [role.code] : [],
+      permissions: [],
+    });
+    await reload();
+  };
+
   const deleteUser = (id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
+  };
+
+  const removeUser = async (id: string) => {
+    await api.deleteUser(id);
+    await reload();
+  };
+
+  const resetUserPassword = async (id: string, password: string, currentPassword: string) => {
+    await api.changePassword(id, password, currentPassword);
   };
 
   const getRoleById = (id: string) => {
@@ -184,6 +229,16 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setAllPermissions(ALL_PERMISSIONS);
   };
 
+  const createRole = async (name: string, permissions: PermissionCode[], displayName = name, description = '') => {
+    await api.createRole({ name, displayName, description, permissions });
+    await reload();
+  };
+
+  const removeRole = async (id: string) => {
+    await api.deleteRole(id);
+    await reload();
+  };
+
   return (
     <PermissionContext.Provider
       value={{
@@ -194,12 +249,19 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateRole,
         deleteRole,
         updateRolePermissions,
+        saveRole,
         addUser,
+        createUser,
         updateUser,
+        saveUser,
         deleteUser,
+        removeUser,
+        resetUserPassword,
         getRoleById,
         getRolePermissions,
         resetToDefaults,
+        createRole,
+        removeRole,
         reload
       }}
     >

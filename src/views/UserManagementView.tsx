@@ -15,6 +15,7 @@ import {
   XCircle,
   X,
   Key,
+  RefreshCw,
   AlertTriangle
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
@@ -28,9 +29,16 @@ interface UserManagementViewProps {
   onNavigate: (path: string) => void;
 }
 
+const generatePassword = () => {
+  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+  const values = new Uint32Array(24);
+  crypto.getRandomValues(values);
+  return Array.from(values, value => characters[value % characters.length]).join('');
+};
+
 export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNavigate }) => {
-  const { users, roles, addUser, updateUser, deleteUser } = usePermissions();
-  const { hasPermission, addActivityLog } = useAuth();
+  const { users, roles, createUser, saveUser, removeUser, resetUserPassword } = usePermissions();
+  const { currentUser, hasPermission, addActivityLog } = useAuth();
   const { showAlert, showConfirm } = useModal();
 
   const [search, setSearch] = useState('');
@@ -41,6 +49,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [resetPassUser, setResetPassUser] = useState<User | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
 
   // Scroll lock when any modal is open
   useEffect(() => {
@@ -64,6 +74,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     status: 'active' as UserStatus,
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
     bio: ''
+    , password: ''
   });
 
   if (!hasPermission('users.read')) {
@@ -84,7 +95,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleSaveNewUser = (e: React.FormEvent) => {
+  const handleSaveNewUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasPermission('users.create')) {
       showAlert({
@@ -95,7 +106,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       return;
     }
 
-    addUser(formData);
+    try {
+      await createUser(formData, formData.password);
+    } catch (error) {
+      showAlert({ title: '创建失败', message: error instanceof Error ? error.message : '创建用户失败', type: 'danger' });
+      return;
+    }
     addActivityLog('创建用户', `成功添加后台新用户【${formData.name}】(${formData.username})`, 'success');
     setIsAddModalOpen(false);
 
@@ -116,15 +132,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       roleId: roles[0]?.id || '',
       status: 'active',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      bio: ''
+      bio: '',
+      password: ''
     });
   };
 
-  const handleSaveEditUser = (e: React.FormEvent) => {
+  const handleSaveEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser || !hasPermission('users.update')) return;
 
-    updateUser(editingUser.id, editingUser);
+    try {
+      await saveUser(editingUser);
+    } catch (error) {
+      showAlert({ title: '修改失败', message: error instanceof Error ? error.message : '修改用户失败', type: 'danger' });
+      return;
+    }
     addActivityLog('更新用户', `修改了用户【${editingUser.name}】的组织架构与角色`, 'info');
     setEditingUser(null);
     showAlert({
@@ -134,7 +156,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     });
   };
 
-  const handleToggleStatus = (user: User) => {
+  const handleToggleStatus = async (user: User) => {
+    if (user.id === currentUser?.id) {
+      showAlert({
+        title: '安全保护',
+        message: '不允许冻结或解封当前登录用户。',
+        type: 'warning'
+      });
+      return;
+    }
+
     if (!hasPermission('users.update')) {
       showAlert({
         title: '权限不足',
@@ -144,7 +175,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       return;
     }
     const newStatus: UserStatus = user.status === 'active' ? 'suspended' : 'active';
-    updateUser(user.id, { status: newStatus });
+    try {
+      await saveUser({ ...user, status: newStatus });
+    } catch (error) {
+      showAlert({ title: '状态更新失败', message: error instanceof Error ? error.message : '更新用户状态失败', type: 'danger' });
+      return;
+    }
     addActivityLog(
       '状态变更',
       `将用户【${user.name}】状态设置为 ${newStatus === 'active' ? '正常激活' : '暂停封禁'}`,
@@ -153,6 +189,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   };
 
   const handleDelete = (user: User) => {
+    if (user.id === currentUser?.id) {
+      showAlert({
+        title: '安全保护',
+        message: '不允许删除当前登录用户。',
+        type: 'warning'
+      });
+      return;
+    }
+
     if (!hasPermission('users.delete')) {
       showAlert({
         title: '权限不足',
@@ -168,8 +213,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       type: 'danger',
       confirmText: '确认删除',
       cancelText: '取消',
-      onConfirm: () => {
-        deleteUser(user.id);
+      onConfirm: async () => {
+        try {
+          await removeUser(user.id);
+        } catch (error) {
+          showAlert({ title: '删除失败', message: error instanceof Error ? error.message : '删除用户失败', type: 'danger' });
+          return;
+        }
         addActivityLog('删除用户', `移除账号【${user.name}】`, 'danger');
         showAlert({
           title: '已删除账号',
@@ -331,29 +381,37 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                               <Edit2 className="w-4 h-4" />
                             </button>
 
-                            <button
-                              onClick={() => setResetPassUser(user)}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
-                              title="重置安全密码"
-                            >
-                              <Key className="w-4 h-4" />
-                            </button>
+                            {user.id !== currentUser?.id && (
+                              <button
+                                onClick={() => {
+                                  setCurrentPassword('');
+                                  setGeneratedPassword('');
+                                  setResetPassUser(user);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
+                                title="重置安全密码"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
+                            )}
 
-                            <button
-                              onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
-                                isActive
-                                  ? 'text-slate-500 hover:text-rose-600'
-                                  : 'text-rose-500 hover:text-emerald-600'
-                              }`}
-                              title={isActive ? '冻结该账号' : '解封该账号'}
-                            >
-                              {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                            </button>
+                            {user.id !== currentUser?.id && (
+                              <button
+                                onClick={() => handleToggleStatus(user)}
+                                className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                                  isActive
+                                    ? 'text-slate-500 hover:text-rose-600'
+                                    : 'text-rose-500 hover:text-emerald-600'
+                                }`}
+                                title={isActive ? '冻结该账号' : '解封该账号'}
+                              >
+                                {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                              </button>
+                            )}
                           </>
                         )}
 
-                        {hasPermission('users.delete') && (
+                        {hasPermission('users.delete') && user.id !== currentUser?.id && (
                           <button
                             onClick={() => handleDelete(user)}
                             className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 transition-colors"
@@ -430,6 +488,30 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300">
+                  <span>初始密码 *</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, password: generatePassword() })}
+                    className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                    title="生成随机密码"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span>生成随机密码</span>
+                  </button>
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={12}
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="至少 12 个字符"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -625,22 +707,57 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
               重置用户密码凭证
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              已为用户【{resetPassUser.name}】自动生成一次性临时登录密钥:
+              请输入当前登录用户的密码以确认重置操作。
             </p>
 
-            <div className="my-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400 select-all border border-slate-200 dark:border-slate-700">
-              NovaPwd_2026!#88
-            </div>
-
-            <button
-              onClick={() => {
-                addActivityLog('重置密码', `已重置用户【${resetPassUser.name}】的登录密钥`, 'warning');
-                setResetPassUser(null);
-              }}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md"
-            >
-              已复制并完成重置
-            </button>
+            {generatedPassword ? (
+              <>
+                <div className="my-4 rounded-xl border border-amber-300 bg-amber-50 p-3 font-mono text-sm font-bold text-amber-800 select-all dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                  {generatedPassword}
+                </div>
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(generatedPassword);
+                    showAlert({ title: '已复制', message: '新密码已复制，请安全地交付给用户。', type: 'success' });
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md"
+                >
+                  复制新密码
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="当前登录用户密码"
+                  className="w-full my-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-200"
+                />
+                <button
+                  onClick={async () => {
+                    if (!currentPassword) {
+                      showAlert({ title: '需要验证', message: '请输入当前登录用户密码。', type: 'warning' });
+                      return;
+                    }
+                    const password = generatePassword();
+                    try {
+                      await resetUserPassword(resetPassUser.id, password, currentPassword);
+                    } catch (error) {
+                      showAlert({ title: '重置失败', message: error instanceof Error ? error.message : '重置密码失败', type: 'danger' });
+                      return;
+                    }
+                    addActivityLog('重置密码', `已重置用户【${resetPassUser.name}】的登录密码`, 'warning');
+                    setCurrentPassword('');
+                    setGeneratedPassword(password);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md"
+                >
+                  生成并重置密码
+                </button>
+              </>
+            )}
           </div>
         </div>,
         document.body

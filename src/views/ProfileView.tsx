@@ -21,7 +21,7 @@ import { useModal } from '../context/ModalContext';
 import { TwoFactorAuthSection } from '../components/business/security/TwoFactorAuthSection';
 
 export const ProfileView: React.FC = () => {
-  const { currentUser, updateProfile, addActivityLog } = useAuth();
+  const { currentUser, updateProfile, changePassword, addActivityLog } = useAuth();
   const { mode, setMode } = useTheme();
   const { showAlert } = useModal();
 
@@ -67,7 +67,7 @@ export const ProfileView: React.FC = () => {
     });
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwords.newPass !== passwords.confirm) {
       showAlert({
@@ -75,6 +75,16 @@ export const ProfileView: React.FC = () => {
         message: '两次输入的新密码不一致，请重新核对后再试！',
         type: 'warning'
       });
+      return;
+    }
+    if (passwords.newPass.length < 12) {
+      showAlert({ title: '密码不符合要求', message: '新密码至少需要 12 个字符。', type: 'warning' });
+      return;
+    }
+    try {
+      await changePassword(passwords.current, passwords.newPass);
+    } catch (error) {
+      showAlert({ title: '修改失败', message: error instanceof Error ? error.message : '修改密码失败', type: 'danger' });
       return;
     }
     addActivityLog('修改密码', '完成了个人账户登录安全密钥更新', 'success');

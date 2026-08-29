@@ -18,7 +18,6 @@ import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 import type { Role, PermissionCode } from '../types';
-import { ALL_PERMISSIONS } from '$mock';
 import { AccessDeniedView } from './AccessDeniedView';
 
 interface RoleManagementViewProps {
@@ -26,7 +25,7 @@ interface RoleManagementViewProps {
 }
 
 export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNavigate }) => {
-  const { roles, addRole, updateRole, deleteRole, updateRolePermissions } = usePermissions();
+  const { roles, allPermissions, createRole, removeRole, saveRole } = usePermissions();
   const { hasPermission, addActivityLog } = useAuth();
   const { showAlert, showConfirm } = useModal();
 
@@ -38,14 +37,14 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
     code: '',
     name: '',
     description: '',
-    permissions: ['dashboard:view'] as PermissionCode[]
+    permissions: [] as PermissionCode[]
   });
 
   if (!hasPermission('roles.read')) {
     return <AccessDeniedView requiredPermission="roles.read" onNavigate={onNavigate} />;
   }
 
-  const handleCreateRole = (e: React.FormEvent) => {
+  const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasPermission('roles.create')) {
       showAlert({
@@ -56,7 +55,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       return;
     }
 
-    addRole(newRole);
+    try {
+      await createRole(newRole.code, newRole.permissions, newRole.name, newRole.description);
+    } catch (error) {
+      showAlert({ title: '创建失败', message: error instanceof Error ? error.message : '创建角色失败', type: 'danger' });
+      return;
+    }
     addActivityLog('创建角色', `新建了角色模型【${newRole.name}】(${newRole.code})`, 'success');
     setIsAddModalOpen(false);
     showAlert({
@@ -68,7 +72,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       code: '',
       name: '',
       description: '',
-      permissions: ['dashboard:view']
+      permissions: []
     });
   };
 
@@ -82,6 +86,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       return;
     }
     if (!editingRole) return;
+    if (editingRole.isAdministrator) return;
 
     const currentPerms = editingRole.permissions;
     const exists = currentPerms.includes(permCode);
@@ -92,13 +97,14 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
     setEditingRole({ ...editingRole, permissions: updated });
   };
 
-  const handleSaveRolePermissions = () => {
+  const handleSaveRolePermissions = async () => {
     if (!editingRole) return;
-    updateRolePermissions(editingRole.id, editingRole.permissions);
-    updateRole(editingRole.id, {
-      name: editingRole.name,
-      description: editingRole.description
-    });
+    try {
+      await saveRole(editingRole);
+    } catch (error) {
+      showAlert({ title: '保存失败', message: error instanceof Error ? error.message : '保存角色权限失败', type: 'danger' });
+      return;
+    }
     addActivityLog('编辑角色', `更新了角色【${editingRole.name}】的权限节点矩阵`, 'info');
     setEditingRole(null);
     showAlert({
@@ -108,14 +114,14 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
     });
   };
 
-  const handleCloneRole = (role: Role) => {
+  const handleCloneRole = async (role: Role) => {
     if (!hasPermission('roles.create')) return;
-    addRole({
-      code: `${role.code}_copy`,
-      name: `${role.name} (副本)`,
-      description: `复制自 ${role.name}: ${role.description}`,
-      permissions: [...role.permissions]
-    });
+    try {
+      await createRole(`${role.code}Copy`, role.permissions, `${role.name} (副本)`, role.description);
+    } catch (error) {
+      showAlert({ title: '克隆失败', message: error instanceof Error ? error.message : '创建角色副本失败', type: 'danger' });
+      return;
+    }
     addActivityLog('克隆角色', `快捷副本创建【${role.name} (副本)】`, 'info');
     showAlert({
       title: '已克隆副本',
@@ -133,10 +139,10 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       });
       return;
     }
-    if (role.isSystem) {
+    if (role.isAdministrator) {
       showAlert({
         title: '系统防护策略',
-        message: '防护限制：系统内置基础角色为保护业务核心，不允许删除！',
+        message: '防护限制：管理员角色不允许删除。',
         type: 'warning'
       });
       return;
@@ -156,22 +162,24 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       type: 'danger',
       confirmText: '确认删除',
       cancelText: '取消',
-      onConfirm: () => {
-        const ok = deleteRole(role.id);
-        if (ok) {
+      onConfirm: async () => {
+        try {
+          await removeRole(role.id);
           addActivityLog('删除角色', `成功移除角色【${role.name}】`, 'danger');
           showAlert({
             title: '删除完毕',
             message: `角色【${role.name}】已被清理。`,
             type: 'info'
           });
+        } catch (error) {
+          showAlert({ title: '删除失败', message: error instanceof Error ? error.message : '删除角色失败', type: 'danger' });
         }
       }
     });
   };
 
   // Group permissions by category
-  const categories = Array.from(new Set(ALL_PERMISSIONS.map(p => p.category)));
+  const categories = Array.from(new Set(allPermissions.map(p => p.category)));
 
   // Body scroll lock effect
   useEffect(() => {
@@ -222,9 +230,9 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     {role.name}
-                    {role.isSystem && (
+                    {role.isAdministrator && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400">
-                        系统内置
+                        管理员角色
                       </span>
                     )}
                   </h3>
@@ -250,7 +258,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                 </div>
                 <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                   {role.permissions.map(pCode => {
-                    const node = ALL_PERMISSIONS.find(ap => ap.code === pCode);
+                    const node = allPermissions.find(ap => ap.code === pCode);
                     return (
                       <span
                         key={pCode}
@@ -266,7 +274,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
 
             {/* Actions Bar */}
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-              <span className="text-[10px] text-slate-400">更新于 {role.updatedAt}</span>
+              <span className="text-[10px] text-slate-400">更新于 {role.updatedAt ? new Date(role.updatedAt).toLocaleString() : '-'}</span>
 
               <div className="flex items-center space-x-1">
                 {hasPermission('roles.create') && (
@@ -283,13 +291,13 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                   <button
                     onClick={() => setEditingRole({ ...role })}
                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
-                    title="修改权限节点"
+                    title="编辑角色"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                 )}
 
-                {hasPermission('roles.delete') && !role.isSystem && (
+                {hasPermission('roles.delete') && !role.isAdministrator && (
                   <button
                     onClick={() => handleDeleteRole(role)}
                     className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 transition-colors"
@@ -317,9 +325,9 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4 shrink-0">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  配置角色权限 - 【{editingRole.name}】
+                  编辑角色 - 【{editingRole.name}】
                 </h3>
-                <p className="text-xs text-slate-400">勾选授权节点，实时绑定模块可执行权限</p>
+                <p className="text-xs text-slate-400">{editingRole.isAdministrator ? '超级管理员默认拥有全部权限，授权节点不可编辑。' : '勾选授权节点，实时绑定模块可执行权限'}</p>
               </div>
               <button
                 onClick={() => setEditingRole(null)}
@@ -360,12 +368,12 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                 <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
                   <span>授权节点分类:</span>
                   <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
-                    已勾选 {editingRole.permissions.length} / {ALL_PERMISSIONS.length} 项
+                    已勾选 {editingRole.permissions.length} / {allPermissions.length} 项
                   </span>
                 </div>
 
                 {categories.map(cat => {
-                  const catNodes = ALL_PERMISSIONS.filter(p => p.category === cat);
+                  const catNodes = allPermissions.filter(p => p.category === cat);
                   return (
                     <div
                       key={cat}
@@ -381,7 +389,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                             <label
                               key={node.code}
                               onClick={() => handleTogglePermission(editingRole.id, node.code)}
-                              className={`p-2.5 rounded-xl border flex items-start space-x-2.5 cursor-pointer transition-all ${
+                              className={`p-2.5 rounded-xl border flex items-start space-x-2.5 transition-all ${editingRole.isAdministrator ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${
                                 isChecked
                                   ? 'bg-indigo-50/80 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200'
                                   : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
@@ -425,7 +433,7 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                 onClick={handleSaveRolePermissions}
                 className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md"
               >
-                保存授权配置
+                保存角色信息
               </button>
             </div>
           </div>

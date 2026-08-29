@@ -8,6 +8,7 @@ interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
   switchDemoUser: (userId: string) => void;
   hasPermission: (permissionCode: PermissionCode) => boolean;
@@ -73,6 +74,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUserId(null);
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!currentUser) throw new Error('当前用户不存在');
+    await api.changePassword(currentUser.id, newPassword, currentPassword);
+  };
+
   const switchDemoUser = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (user) {
@@ -89,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Super admin overrides everything if code exists
     const userRole = roles.find(r => r.id === currentUser.roleId);
-    if (userRole?.code === 'super_admin') return true;
+    if (userRole?.isAdministrator) return true;
 
     return permissions.includes(permissionCode);
   };
@@ -124,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         isAuthenticated,
         login,
+        changePassword,
         logout,
         switchDemoUser,
         hasPermission,
