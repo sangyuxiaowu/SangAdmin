@@ -120,13 +120,13 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center space-x-2">
-                      {item.applicantAvatar && (
+                      {item.applicantAvatar ? (
                         <img
                           src={item.applicantAvatar}
                           alt={item.applicant}
                           className="w-6 h-6 rounded-full object-cover shrink-0"
                         />
-                      )}
+                      ) : null}
                       <div>
                         <div className="font-semibold text-slate-800 dark:text-slate-200">{item.applicant}</div>
                         <div className="text-[11px] text-slate-400">{item.department}</div>

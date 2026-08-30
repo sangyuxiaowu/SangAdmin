@@ -29,6 +29,7 @@ import {
 import { NAV_ITEMS } from '../../data/navigation';
 import { useAuth } from '../../context/AuthContext';
 import type { NavItem } from '../../types';
+import { DEFAULT_AVATAR } from '../../utils';
 
 interface SidebarProps {
   currentPath: string;
@@ -289,8 +290,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2.5 min-w-0">
                   <img
-                    src={currentUser?.avatar}
-                    alt={currentUser?.name}
+                    src={currentUser?.avatar || DEFAULT_AVATAR}
+                    alt={currentUser?.name || '用户头像'}
                     className="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/30"
                   />
                   <div className="min-w-0">
@@ -332,10 +333,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <div className="flex justify-center">
               <img
-                src={currentUser?.avatar}
-                alt={currentUser?.name}
+                src={currentUser?.avatar || DEFAULT_AVATAR}
+                alt={currentUser?.name || '用户头像'}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/30"
-                title={`${currentUser?.name} (${currentUser?.roleName})`}
+                title={`${currentUser?.name || ''} (${currentUser?.roleName || ''})`}
               />
             </div>
           )}

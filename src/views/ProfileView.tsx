@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useModal } from '../context/ModalContext';
 import { TwoFactorAuthSection } from '../components/business/security/TwoFactorAuthSection';
+import { DEFAULT_AVATAR } from '../utils';
 
 export const ProfileView: React.FC = () => {
   const { currentUser, updateProfile, changePassword, addActivityLog } = useAuth();
@@ -99,8 +100,8 @@ export const ProfileView: React.FC = () => {
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-6">
         <div className="relative group">
           <img
-            src={currentUser?.avatar}
-            alt={currentUser?.name}
+            src={currentUser?.avatar || DEFAULT_AVATAR}
+            alt={currentUser?.name || '用户头像'}
             className="w-20 h-20 rounded-full object-cover ring-4 ring-indigo-500/20 shadow-md"
           />
           <div className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">

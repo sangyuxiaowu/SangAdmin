@@ -37,6 +37,7 @@ import { CustomSelect } from '../components/common/CustomSelect';
 import type { SelectOption } from '../components/common/CustomSelect';
 import { DEFAULT_ORG_TREE, DEFAULT_USERS } from '$mock';
 import type { OrgNode, OrgType, User } from '../types';
+import { DEFAULT_AVATAR } from '../utils';
 
 // Helper icon & color for OrgType
 const TYPE_CONFIG: Record<OrgType, { label: string; icon: React.ElementType; color: string; bg: string }> = {
@@ -728,11 +729,8 @@ export const OrgManagementView: React.FC<OrgManagementViewProps> = ({ onNavigate
                   <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-slate-800/60 dark:to-indigo-950/30 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center space-x-3.5">
                       <img
-                        src={
-                          selectedOrg.leaderAvatar ||
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-                        }
-                        alt={selectedOrg.leaderName}
+                        src={selectedOrg.leaderAvatar || DEFAULT_AVATAR}
+                        alt={selectedOrg.leaderName || '负责人'}
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-500/30"
                       />
                       <div>
@@ -857,8 +855,8 @@ export const OrgManagementView: React.FC<OrgManagementViewProps> = ({ onNavigate
                               <td className="py-2.5 px-3">
                                 <div className="flex items-center space-x-2.5">
                                   <img
-                                    src={user.avatar}
-                                    alt={user.name}
+                                    src={user.avatar || DEFAULT_AVATAR}
+                                    alt={user.name || '用户'}
                                     className="w-7 h-7 rounded-full object-cover"
                                   />
                                   <div>

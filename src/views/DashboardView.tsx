@@ -36,6 +36,7 @@ import {
 } from '$mock';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
+import { DEFAULT_AVATAR } from '../utils';
 
 interface DashboardViewProps {
   onNavigate: (path: string) => void;
@@ -398,8 +399,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 flex items-start space-x-3 text-xs"
                 >
                   <img
-                    src={log.userAvatar}
-                    alt={log.userName}
+                    src={log.userAvatar || DEFAULT_AVATAR}
+                    alt={log.userName || '用户'}
                     className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
                   />
                   <div className="flex-1 min-w-0">

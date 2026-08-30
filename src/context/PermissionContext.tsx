@@ -3,6 +3,7 @@ import type { Role, User, PermissionCode, PermissionNode } from '../types';
 import { DEFAULT_ROLES, DEFAULT_USERS, ALL_PERMISSIONS } from '$mock';
 import { api, getAccessToken } from '../api/client';
 import type { PermissionDto, RoleDto, UserDto } from '../api/contracts';
+import { DEFAULT_AVATAR } from '../utils';
 
 interface PermissionContextType {
   roles: Role[];
@@ -56,7 +57,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     username: user.userName,
     name: user.nickname || user.userName,
     email: user.email,
-    avatar: '',
+    avatar: DEFAULT_AVATAR,
     phone: user.phoneNumber ?? '',
     department: '',
     position: '',

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- 背景铺满 -->
+  <rect width="100" height="100" fill="#E5E7EB" />
+  
+  <!-- 人物头部 -->
+  <circle cx="50" cy="32" r="12" fill="#9CA3AF" />
+  
+  <!-- 人物身体 -->
+  <path d="M 50 46 C 35 46, 25 60, 25 75 L 25 85 C 25 90, 30 92, 35 92 L 65 92 C 70 92, 75 90, 75 85 L 75 75 C 75 60, 65 46, 50 46 Z" fill="#9CA3AF" />
+</svg>

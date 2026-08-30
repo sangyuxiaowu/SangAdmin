@@ -15,6 +15,7 @@ import { useModal } from '../context/ModalContext';
 import { CustomSelect } from '../components/common/CustomSelect';
 import type { ActivityLog } from '../types';
 import { AccessDeniedView } from './AccessDeniedView';
+import { DEFAULT_AVATAR } from '../utils';
 
 interface AuditLogViewProps {
   onNavigate: (path: string) => void;
@@ -120,8 +121,8 @@ export const AuditLogView: React.FC<AuditLogViewProps> = ({ onNavigate }) => {
                   <td className="py-3.5 px-4">
                     <div className="flex items-center space-x-2.5">
                       <img
-                        src={log.userAvatar}
-                        alt={log.userName}
+                        src={log.userAvatar || DEFAULT_AVATAR}
+                        alt={log.userName || '用户'}
                         className="w-7 h-7 rounded-full object-cover"
                       />
                       <span className="font-bold text-slate-800 dark:text-slate-200">

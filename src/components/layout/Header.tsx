@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
 import type { ThemeMode } from '../../types';
 import { MOCK_NOTIFICATIONS } from '$mock';
+import { DEFAULT_AVATAR } from '../../utils';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
@@ -260,8 +261,8 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <img
-              src={currentUser?.avatar}
-              alt={currentUser?.name}
+              src={currentUser?.avatar || DEFAULT_AVATAR}
+              alt={currentUser?.name || '用户头像'}
               className="w-8 h-8 rounded-xl object-cover ring-2 ring-indigo-500/20"
             />
             <div className="hidden md:flex flex-col text-left">

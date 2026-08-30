@@ -24,6 +24,7 @@ import { useModal } from '../context/ModalContext';
 import { CustomSelect } from '../components/common/CustomSelect';
 import type { User, UserStatus } from '../types';
 import { AccessDeniedView } from './AccessDeniedView';
+import { DEFAULT_AVATAR } from '../utils';
 
 interface UserManagementViewProps {
   onNavigate: (path: string) => void;
@@ -72,9 +73,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     position: '高级工程师',
     roleId: roles[0]?.id || '',
     status: 'active' as UserStatus,
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-    bio: ''
-    , password: ''
+    avatar: DEFAULT_AVATAR,
+    bio: '',
+    password: ''
   });
 
   if (!hasPermission('users.read')) {
@@ -131,7 +132,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       position: '高级工程师',
       roleId: roles[0]?.id || '',
       status: 'active',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      avatar: DEFAULT_AVATAR,
       bio: '',
       password: ''
     });
@@ -323,8 +324,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={user.avatar}
-                          alt={user.name}
+                          src={user.avatar || DEFAULT_AVATAR}
+                          alt={user.name || '用户'}
                           className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/20 shrink-0"
                         />
                         <div>

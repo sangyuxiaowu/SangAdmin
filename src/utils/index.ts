@@ -1,4 +1,7 @@
+import defaultAvatar from '../assets/avatar.svg';
 import type { OrgNode, PermissionNode, PermissionCode } from '../types';
+
+export const DEFAULT_AVATAR = defaultAvatar;
 
 /**
  * 通用树结构节点查找
