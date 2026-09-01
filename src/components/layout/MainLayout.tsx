@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CommandPalette } from '../common/CommandPalette';
@@ -18,14 +18,30 @@ import { ResourceListView } from '../../views/ResourceListView';
 import { NotificationsView } from '../../views/NotificationsView';
 import { ResultStatusView } from '../../views/ResultStatusView';
 
+const DEFAULT_PATH = '/dashboard';
+
+const getHashPath = () => window.location.hash.slice(1) || DEFAULT_PATH;
+
 export const MainLayout: React.FC = () => {
-  const [currentPath, setCurrentPath] = useState('/dashboard');
+  const [currentPath, setCurrentPath] = useState(getHashPath);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.history.replaceState(null, '', `#${DEFAULT_PATH}`);
+    }
+
+    const handleHashChange = () => setCurrentPath(getHashPath());
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const handleNavigate = (path: string) => {
     setCurrentPath(path);
+    window.location.hash = path;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
