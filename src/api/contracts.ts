@@ -29,6 +29,7 @@ export interface UserDto {
   email: string;
   emailConfirmed: boolean;
   phoneNumber: string | null;
+  phoneNumberConfirmed: boolean;
   lastLoginAt: string | null;
   isEnabled: boolean;
   roles: string[];
@@ -47,19 +48,24 @@ export interface RoleDto {
   permissions: string[];
 }
 
-export interface PermissionDto {
-  name: string;
+export interface ResourceDto {
   resourceKey: string;
   resourceName: string;
+  actions: ResourceActionDto[];
+}
+
+export interface ResourceActionDto {
   actionKey: string;
+  actionName: string;
   description: string;
+  permission: string;
 }
 
 export interface CreateUserRequest {
   userName: string;
   nickname: string;
   email: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   password: string;
   isEnabled: boolean;
   roles: string[];
@@ -69,7 +75,7 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   nickname: string;
   email: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   isEnabled: boolean;
   roles: string[];
   permissions: string[];

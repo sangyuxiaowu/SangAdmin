@@ -647,6 +647,37 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <span>电子邮箱</span>
+                    {editingUser.emailConfirmed && <span className="text-emerald-600 dark:text-emerald-400">已验证</span>}
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    disabled={editingUser.emailConfirmed}
+                    value={editingUser.email}
+                    onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <span>联系电话</span>
+                    {editingUser.phoneNumberConfirmed && <span className="text-emerald-600 dark:text-emerald-400">已验证</span>}
+                  </label>
+                  <input
+                    type="tel"
+                    disabled={editingUser.phoneNumberConfirmed}
+                    value={editingUser.phone}
+                    onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })}
+                    placeholder="未绑定"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     所属部门
                   </label>

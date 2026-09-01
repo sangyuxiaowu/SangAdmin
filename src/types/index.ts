@@ -68,8 +68,10 @@ export interface User {
   username: string;
   name: string;
   email: string;
+  emailConfirmed?: boolean;
   avatar: string;
   phone: string;
+  phoneNumberConfirmed?: boolean;
   department: string;
   position: string;
   roleId: string;

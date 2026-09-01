@@ -3,7 +3,7 @@ import type {
   LoginRequest,
   LoginResponse,
   PagedResponse,
-  PermissionDto,
+  ResourceDto,
   RoleDto,
   UserDto,
 } from './contracts';
@@ -47,13 +47,21 @@ const roles: RoleDto[] = DEFAULT_ROLES.map(role => ({
   isAdministrator: Boolean(role.isAdministrator),
   permissions: role.permissions,
 }));
-const resources: PermissionDto[] = ALL_PERMISSIONS.map(permission => ({
-  name: permission.code,
-  resourceKey: permission.category,
-  resourceName: permission.category,
-  actionKey: permission.code,
-  description: permission.name,
-}));
+const resources = Object.values(ALL_PERMISSIONS.reduce<Record<string, ResourceDto>>((result, permission) => {
+  const [resourceKey, actionKey] = permission.code.split(/[.:]/);
+  const resource = result[resourceKey] ??= {
+    resourceKey,
+    resourceName: permission.category,
+    actions: [],
+  };
+  resource.actions.push({
+    actionKey,
+    actionName: permission.name,
+    description: permission.description,
+    permission: permission.code,
+  });
+  return result;
+}, {}));
 
 export const mockApi = {
   login(request: LoginRequest): ApiResponse<LoginResponse> {
@@ -86,7 +94,7 @@ export const mockApi = {
     });
   },
 
-  getResources(): ApiResponse<PermissionDto[]> {
+  getResources(): ApiResponse<ResourceDto[]> {
     return success(resources);
   },
 };

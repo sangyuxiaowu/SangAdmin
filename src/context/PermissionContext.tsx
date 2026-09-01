@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Role, User, PermissionCode, PermissionNode } from '../types';
 import { DEFAULT_ROLES, DEFAULT_USERS, ALL_PERMISSIONS } from '$mock';
 import { api, getAccessToken } from '../api/client';
-import type { PermissionDto, RoleDto, UserDto } from '../api/contracts';
+import type { ResourceActionDto, ResourceDto, RoleDto, UserDto } from '../api/contracts';
 import { DEFAULT_AVATAR } from '../utils';
 
 interface PermissionContextType {
@@ -57,8 +57,10 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     username: user.userName,
     name: user.nickname || user.userName,
     email: user.email,
+    emailConfirmed: user.emailConfirmed,
     avatar: DEFAULT_AVATAR,
     phone: user.phoneNumber ?? '',
+    phoneNumberConfirmed: user.phoneNumberConfirmed,
     department: '',
     position: '',
     roleId: role?.id || '',
@@ -69,11 +71,11 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   };
 
-  const toPermission = (permission: PermissionDto): PermissionNode => ({
-    code: permission.name as PermissionCode,
-    name: permission.description || permission.name,
-    description: permission.description,
-    category: permission.resourceName as PermissionNode['category'],
+  const toPermission = (resource: ResourceDto, action: ResourceActionDto): PermissionNode => ({
+    code: action.permission as PermissionCode,
+    name: action.actionName || action.permission,
+    description: action.description,
+    category: resource.resourceName as PermissionNode['category'],
   });
 
   const reload = async (): Promise<User[]> => {
@@ -88,7 +90,9 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const loadedUsers = usersResponse.data.data.map(user => toUser(user, loadedRoles));
     setUsers(loadedUsers);
     setRoles(loadedRoles);
-    setAllPermissions(permissionsResponse.data.map(toPermission));
+    setAllPermissions(permissionsResponse.data.flatMap(resource =>
+      resource.actions.map(action => toPermission(resource, action))
+    ));
     return loadedUsers;
   };
 
@@ -164,7 +168,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       userName: userData.username,
       nickname: userData.name,
       email: userData.email,
-      phoneNumber: userData.phone,
+      phoneNumber: userData.phone.trim() || null,
       password,
       isEnabled: userData.status === 'active',
       roles: role ? [role.code] : [],
@@ -194,7 +198,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await api.updateUser(user.id, {
       nickname: user.name,
       email: user.email,
-      phoneNumber: user.phone,
+      phoneNumber: user.phone.trim() || null,
       isEnabled: user.status === 'active',
       roles: role ? [role.code] : [],
       permissions: [],
