@@ -25,7 +25,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: parseInt(process.env.PORT ?? "5173"),
+      port: parseInt(process.env.PORT ?? '5173'),
+      strictPort: true,
       proxy: useBackend
         ? {
             '/api': {
