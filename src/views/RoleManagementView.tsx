@@ -9,6 +9,8 @@ import {
   Copy,
   Users,
   Check,
+  CheckSquare,
+  Square,
   X,
   Lock,
   Sparkles,
@@ -95,6 +97,27 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
       : [...currentPerms, permCode];
 
     setEditingRole({ ...editingRole, permissions: updated });
+  };
+
+  const handleSelectAllPermissions = () => {
+    if (!editingRole || editingRole.isAdministrator) return;
+    setEditingRole({ ...editingRole, permissions: allPermissions.map(permission => permission.code) });
+  };
+
+  const handleClearAllPermissions = () => {
+    if (!editingRole || editingRole.isAdministrator) return;
+    setEditingRole({ ...editingRole, permissions: [] });
+  };
+
+  const handleSelectCategoryPermissions = (category: string) => {
+    if (!editingRole || editingRole.isAdministrator) return;
+    const categoryPermissions = allPermissions
+      .filter(permission => permission.category === category)
+      .map(permission => permission.code);
+    setEditingRole({
+      ...editingRole,
+      permissions: Array.from(new Set([...editingRole.permissions, ...categoryPermissions]))
+    });
   };
 
   const handleSaveRolePermissions = async () => {
@@ -365,11 +388,31 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
 
               {/* Permission Tree Category Groups */}
               <div className="space-y-4 pt-2">
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                <div className="font-bold text-slate-900 dark:text-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <span>授权节点分类:</span>
-                  <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
-                    已勾选 {editingRole.permissions.length} / {allPermissions.length} 项
-                  </span>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                      已勾选 {editingRole.permissions.length} / {allPermissions.length} 项
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllPermissions}
+                      disabled={editingRole.isAdministrator || editingRole.permissions.length === allPermissions.length}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5" />
+                      全选全部
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearAllPermissions}
+                      disabled={editingRole.isAdministrator || editingRole.permissions.length === 0}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Square className="w-3.5 h-3.5" />
+                      取消全部
+                    </button>
+                  </div>
                 </div>
 
                 {categories.map(cat => {
@@ -379,8 +422,19 @@ export const RoleManagementView: React.FC<RoleManagementViewProps> = ({ onNaviga
                       key={cat}
                       className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50"
                     >
-                      <div className="font-bold text-slate-800 dark:text-slate-200 mb-2">
-                        {cat} 模块
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200">
+                          {cat} 模块
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectCategoryPermissions(cat)}
+                          disabled={editingRole.isAdministrator || catNodes.every(node => editingRole.permissions.includes(node.code))}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <CheckSquare className="w-3 h-3" />
+                          全选此组
+                        </button>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {catNodes.map(node => {
