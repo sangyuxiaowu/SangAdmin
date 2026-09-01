@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   User,
   Shield,
@@ -35,9 +35,23 @@ export const ProfileView: React.FC = () => {
     phone: currentUser?.phone || '',
     department: currentUser?.department || '',
     position: currentUser?.position || '',
-    bio: currentUser?.bio || '',
-    avatar: currentUser?.avatar || ''
+    avatar: currentUser?.avatar || '',
+    bio: currentUser?.bio || ''
   });
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setProfileForm({
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: currentUser.phone,
+      department: currentUser.department,
+      position: currentUser.position,
+      avatar: currentUser.avatar,
+      bio: currentUser.bio || ''
+    });
+  }, [currentUser]);
 
   // Password State
   const [passwords, setPasswords] = useState({
@@ -48,8 +62,7 @@ export const ProfileView: React.FC = () => {
 
   const [passSuccess, setPassSuccess] = useState(false);
 
-  // Avatar presets
-  const AVATAR_PRESETS = [
+  const avatarPresets = [
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
@@ -58,12 +71,24 @@ export const ProfileView: React.FC = () => {
     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
   ];
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile(profileForm);
+    setSavingProfile(true);
+    try {
+      await updateProfile(profileForm);
+    } catch (error) {
+      showAlert({
+        title: '保存失败',
+        message: error instanceof Error ? error.message : '个人资料保存失败',
+        type: 'danger'
+      });
+      setSavingProfile(false);
+      return;
+    }
+    setSavingProfile(false);
     showAlert({
       title: '更新成功',
-      message: '个人资料与背景签名信息修改已保存！',
+      message: '个人资料已保存。修改后的邮箱或手机号需要重新验证。',
       type: 'success'
     });
   };
@@ -100,11 +125,11 @@ export const ProfileView: React.FC = () => {
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-6">
         <div className="relative group">
           <img
-            src={currentUser?.avatar || DEFAULT_AVATAR}
+            src={profileForm.avatar || currentUser?.avatar || DEFAULT_AVATAR}
             alt={currentUser?.name || '用户头像'}
             className="w-20 h-20 rounded-full object-cover ring-4 ring-indigo-500/20 shadow-md"
           />
-          <div className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+          <div className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
             <Camera className="w-6 h-6 text-white" />
           </div>
         </div>
@@ -116,9 +141,6 @@ export const ProfileView: React.FC = () => {
               {currentUser?.roleName}
             </span>
           </h1>
-          <p className="text-xs text-slate-400">
-            {currentUser?.department} · {currentUser?.position}
-          </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
             账号 ID: {currentUser?.username} ({currentUser?.email})
           </p>
@@ -160,18 +182,18 @@ export const ProfileView: React.FC = () => {
               更换个人形象头像
             </label>
             <div className="flex flex-wrap gap-3">
-              {AVATAR_PRESETS.map((imgUrl, idx) => (
+              {avatarPresets.map(imageUrl => (
                 <button
                   type="button"
-                  key={idx}
-                  onClick={() => setProfileForm({ ...profileForm, avatar: imgUrl })}
+                  key={imageUrl}
+                  onClick={() => setProfileForm({ ...profileForm, avatar: imageUrl })}
                   className={`relative rounded-full p-0.5 border-2 transition-all ${
-                    profileForm.avatar === imgUrl
+                    profileForm.avatar === imageUrl
                       ? 'border-indigo-600 ring-2 ring-indigo-500/30 scale-105'
                       : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={imgUrl} className="w-12 h-12 rounded-full object-cover" alt="Avatar" />
+                  <img src={imageUrl} className="w-12 h-12 rounded-full object-cover" alt="头像预设" />
                 </button>
               ))}
             </div>
@@ -191,8 +213,11 @@ export const ProfileView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                电子邮箱
+              <label className="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <span>电子邮箱</span>
+                <span className={currentUser?.emailConfirmed ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                  {currentUser?.emailConfirmed ? '已验证' : '未验证'}
+                </span>
               </label>
               <input
                 type="email"
@@ -203,8 +228,11 @@ export const ProfileView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                联系手机号
+              <label className="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <span>联系手机号</span>
+                <span className={currentUser?.phoneNumberConfirmed ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                  {currentUser?.phoneNumberConfirmed ? '已验证' : '未验证'}
+                </span>
               </label>
               <input
                 type="text"
@@ -225,6 +253,19 @@ export const ProfileView: React.FC = () => {
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
               />
             </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                岗位职位
+              </label>
+              <input
+                type="text"
+                value={profileForm.position}
+                onChange={e => setProfileForm({ ...profileForm, position: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
+              />
+            </div>
+
           </div>
 
           <div>
@@ -242,10 +283,11 @@ export const ProfileView: React.FC = () => {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
+              disabled={savingProfile}
               className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-md shadow-indigo-500/20"
             >
               <Save className="w-4 h-4" />
-              <span>保存个人信息</span>
+              <span>{savingProfile ? '保存中...' : '保存个人信息'}</span>
             </button>
           </div>
         </form>

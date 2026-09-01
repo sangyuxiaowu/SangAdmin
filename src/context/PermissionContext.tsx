@@ -14,6 +14,7 @@ interface PermissionContextType {
   deleteRole: (id: string) => boolean;
   updateRolePermissions: (roleId: string, permissions: PermissionCode[]) => void;
   saveRole: (role: Role) => Promise<void>;
+  saveRoles: (roles: Role[]) => Promise<void>;
   addUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => void;
   createUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => void;
@@ -40,7 +41,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     id: String(role.id),
     code: role.name,
     name: role.displayName,
-    description: role.description,
+    description: role.description ?? '',
     permissions: role.permissions as PermissionCode[],
     isAdministrator: role.isAdministrator,
     userCount: role.userCount,
@@ -65,9 +66,11 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     position: '',
     roleId: role?.id || '',
     roleName: role?.name ?? roleCode,
+    isAdministrator: user.isAdministrator,
     status: user.isEnabled ? 'active' : 'suspended',
     lastLogin: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '-',
     createdAt: '',
+    bio: user.bio ?? '',
     };
   };
 
@@ -146,6 +149,15 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       description: role.description,
       permissions: role.permissions,
     });
+    await reload();
+  };
+
+  const saveRoles = async (changedRoles: Role[]) => {
+    await Promise.all(changedRoles.map(role => api.updateRole(role.id, {
+      displayName: role.name,
+      description: role.description,
+      permissions: role.permissions,
+    })));
     await reload();
   };
 
@@ -255,6 +267,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteRole,
         updateRolePermissions,
         saveRole,
+        saveRoles,
         addUser,
         createUser,
         updateUser,

@@ -76,6 +76,7 @@ export interface User {
   position: string;
   roleId: string;
   roleName?: string;
+  isAdministrator?: boolean;
   status: UserStatus;
   lastLogin: string;
   createdAt: string;

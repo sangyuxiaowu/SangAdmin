@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
 import type { PermissionCode } from '../types';
 import { AccessDeniedView } from './AccessDeniedView';
 
@@ -20,15 +21,19 @@ interface PermissionMatrixViewProps {
 }
 
 export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNavigate }) => {
-  const { roles, allPermissions, saveRole } = usePermissions();
+  const { roles, allPermissions, saveRoles } = usePermissions();
   const { hasPermission, addActivityLog } = useAuth();
+  const { showAlert } = useModal();
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draftPermissions, setDraftPermissions] = useState<Record<string, PermissionCode[]>>({});
+  const [changedRoleIds, setChangedRoleIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setDraftPermissions(Object.fromEntries(roles.map(role => [role.id, role.permissions])));
+    setChangedRoleIds(new Set());
   }, [roles]);
 
   if (!hasPermission('permissions.read')) {
@@ -41,9 +46,24 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
     p => activeCategory === 'all' || p.category === activeCategory
   );
 
+  const updateChangedRole = (roleId: string, permissions: PermissionCode[], originalPermissions: PermissionCode[]) => {
+    const isChanged = permissions.length !== originalPermissions.length
+      || permissions.some(permission => !originalPermissions.includes(permission));
+
+    setChangedRoleIds(current => {
+      const next = new Set(current);
+      if (isChanged) {
+        next.add(roleId);
+      } else {
+        next.delete(roleId);
+      }
+      return next;
+    });
+  };
+
   const handleCellToggle = (roleId: string, permCode: PermissionCode) => {
     const role = roles.find(r => r.id === roleId);
-    if (!role || role.isAdministrator) return;
+    if (!role || role.isAdministrator || !hasPermission('roles.update')) return;
 
     const permissions = draftPermissions[roleId] ?? role.permissions;
     const exists = permissions.includes(permCode);
@@ -52,11 +72,12 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
       : [...permissions, permCode];
 
     setDraftPermissions(current => ({ ...current, [roleId]: updated }));
+  updateChangedRole(roleId, updated, role.permissions);
   };
 
   const handleToggleCategoryForRole = (roleId: string, category: string) => {
     const role = roles.find(r => r.id === roleId);
-    if (!role) return;
+    if (!role || role.isAdministrator || !hasPermission('roles.update')) return;
 
     const permissions = draftPermissions[roleId] ?? role.permissions;
     const categoryPermCodes = allPermissions.filter(p => p.category === category).map(p => p.code);
@@ -73,18 +94,31 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
     }
 
     setDraftPermissions(current => ({ ...current, [roleId]: updated }));
+    updateChangedRole(roleId, updated, role.permissions);
   };
 
   const handleSaveAll = async () => {
+    if (changedRoleIds.size === 0 || saving) return;
+
+    const changedRoles = roles
+      .filter(role => changedRoleIds.has(role.id) && !role.isAdministrator)
+      .map(role => ({ ...role, permissions: draftPermissions[role.id] ?? role.permissions }));
+
+    setSaving(true);
     try {
-      await Promise.all(roles.filter(role => !role.isAdministrator).map(role =>
-        saveRole({ ...role, permissions: draftPermissions[role.id] ?? role.permissions })
-      ));
-      addActivityLog('权限矩阵更新', '保存全站角色与权限关联矩阵配置', 'success');
+      await saveRoles(changedRoles);
+      addActivityLog('权限矩阵更新', `更新了 ${changedRoles.length} 个角色的权限配置`, 'success');
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
-    } catch {
+    } catch (error) {
       setSaveSuccess(false);
+      showAlert({
+        title: '保存失败',
+        message: error instanceof Error ? error.message : '权限矩阵保存失败',
+        type: 'danger'
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -107,10 +141,11 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
         <div className="flex items-center space-x-3">
           <button
             onClick={handleSaveAll}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1.5"
+            disabled={changedRoleIds.size === 0 || saving || !hasPermission('roles.update')}
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 disabled:shadow-none transition-all flex items-center gap-1.5"
           >
             <Save className="w-4 h-4" />
-            <span>{saveSuccess ? '矩阵更改已保存！' : '保存矩阵更改'}</span>
+            <span>{saveSuccess ? '矩阵更改已保存！' : saving ? '保存中...' : `保存矩阵更改${changedRoleIds.size ? ` (${changedRoleIds.size})` : ''}`}</span>
           </button>
         </div>
       </div>
@@ -191,7 +226,7 @@ export const PermissionMatrixView: React.FC<PermissionMatrixViewProps> = ({ onNa
                       <td
                         key={role.id}
                         onClick={() => handleCellToggle(role.id, perm.code)}
-                        className={`py-3 px-4 text-center border-r border-slate-100 dark:border-slate-800/40 transition-colors ${role.isAdministrator ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30'}`}
+                        className={`py-3 px-4 text-center border-r border-slate-100 dark:border-slate-800/40 transition-colors ${role.isAdministrator || !hasPermission('roles.update') ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30'}`}
                       >
                         <div className="inline-flex items-center justify-center">
                           {isGranted ? (

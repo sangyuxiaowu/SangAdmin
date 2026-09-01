@@ -3,6 +3,8 @@ import type { User, PermissionCode, ActivityLog } from '../types';
 import { usePermissions } from './PermissionContext';
 import { MOCK_ACTIVITY_LOGS } from '$mock';
 import { api, clearAccessToken, getAccessToken } from '../api/client';
+import type { UserDto } from '../api/contracts';
+import { DEFAULT_AVATAR } from '../utils';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -12,7 +14,7 @@ interface AuthContextType {
   logout: () => void;
   switchDemoUser: (userId: string) => void;
   hasPermission: (permissionCode: PermissionCode) => boolean;
-  updateProfile: (updates: Partial<User>) => void;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   activityLogs: ActivityLog[];
   addActivityLog: (action: string, target: string, type?: ActivityLog['type']) => void;
 }
@@ -20,11 +22,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, roles, getRolePermissions, reload } = usePermissions();
+  const { users, getRolePermissions, updateUser } = usePermissions();
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
-    return localStorage.getItem('sang_active_user_id');
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
     const saved = localStorage.getItem('sang_logs') || localStorage.getItem('nova_logs');
@@ -38,28 +39,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return MOCK_ACTIVITY_LOGS;
   });
 
+  const applyCurrentUser = (user: UserDto) => {
+    let mappedUser: User;
+    setCurrentUser(previousUser => {
+      mappedUser = {
+      id: String(user.id),
+      username: user.userName,
+      name: user.nickname || user.userName,
+      email: user.email,
+      emailConfirmed: user.emailConfirmed,
+      avatar: previousUser?.avatar || DEFAULT_AVATAR,
+      phone: user.phoneNumber ?? '',
+      phoneNumberConfirmed: user.phoneNumberConfirmed,
+      department: previousUser?.department || '',
+      position: previousUser?.position || '',
+      roleId: user.roles[0] ?? '',
+      roleName: user.roles[0] ?? '',
+      isAdministrator: user.isAdministrator,
+      status: user.isEnabled ? 'active' : 'suspended',
+      lastLogin: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '-',
+      createdAt: '',
+      bio: user.bio ?? '',
+      };
+      return mappedUser;
+    });
+    setCurrentPermissions(user.permissions);
+    updateUser(String(user.id), {
+      name: user.nickname || user.userName,
+      email: user.email,
+      emailConfirmed: user.emailConfirmed,
+      phone: user.phoneNumber ?? '',
+      phoneNumberConfirmed: user.phoneNumberConfirmed,
+      bio: user.bio ?? '',
+    });
+  };
+
   useEffect(() => {
-    if (currentUserId) {
-      localStorage.setItem('sang_active_user_id', currentUserId);
-    } else {
-      localStorage.removeItem('sang_active_user_id');
-    }
-  }, [currentUserId]);
+    if (!getAccessToken()) return;
+    void api.getProfile()
+      .then(response => applyCurrentUser(response.data))
+      .catch(() => clearAccessToken());
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('sang_logs', JSON.stringify(activityLogs));
   }, [activityLogs]);
 
-  const currentUser = users.find(u => u.id === currentUserId) || null;
   const isAuthenticated = !!currentUser && currentUser.status === 'active';
 
   const login = async (accountInput: string, password: string): Promise<boolean> => {
     try {
-      await api.login({ userName: accountInput.trim(), password });
-      const loadedUsers = await reload();
-      const user = loadedUsers.find(item => item.username.toLowerCase() === accountInput.trim().toLowerCase());
-      if (!user) return false;
-      setCurrentUserId(user.id);
+      const result = await api.login({ userName: accountInput.trim(), password });
+      applyCurrentUser(result.data.user);
       return true;
     } catch {
       return false;
@@ -71,7 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addActivityLog('用户退出', `用户【${currentUser.name}】已安全退出系统`, 'info');
     }
     clearAccessToken();
-    setCurrentUserId(null);
+    setCurrentUser(null);
+    setCurrentPermissions([]);
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -82,28 +114,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchDemoUser = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (user) {
-      setCurrentUserId(user.id);
+      setCurrentUser(user);
+      setCurrentPermissions(getRolePermissions(user.roleId));
       addActivityLog('切换视角', `已快速切换身份至【${user.name}】(${user.roleName})`, 'info');
     }
   };
 
   const hasPermission = (permissionCode: PermissionCode): boolean => {
     if (!currentUser || currentUser.status !== 'active') return false;
-    
-    // Get role permissions
-    const permissions = getRolePermissions(currentUser.roleId);
-    
-    // Super admin overrides everything if code exists
-    const userRole = roles.find(r => r.id === currentUser.roleId);
-    if (userRole?.isAdministrator) return true;
 
-    return permissions.includes(permissionCode);
+    return currentUser.isAdministrator
+      || currentPermissions.includes('*')
+      || currentPermissions.includes(permissionCode);
   };
 
-  const updateProfile = (updates: Partial<User>) => {
-    if (!currentUser) return;
-    const { updateUser } = usePermissions();
-    updateUser(currentUser.id, updates);
+  const updateProfile = async (updates: Partial<User>) => {
+    if (!currentUser) throw new Error('当前用户不存在');
+    const response = await api.updateProfile({
+      nickname: updates.name ?? currentUser.name,
+      email: updates.email ?? currentUser.email,
+      phoneNumber: (updates.phone ?? currentUser.phone).trim() || null,
+      bio: updates.bio ?? currentUser.bio ?? null,
+    });
+    applyCurrentUser(response.data);
     addActivityLog('信息维护', `用户【${currentUser.name}】修改了个人资料`, 'info');
   };
 

@@ -1,4 +1,4 @@
-import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateRoleRequest, UpdateUserRequest, UserDto } from './contracts';
+import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateProfileRequest, UpdateRoleRequest, UpdateUserRequest, UserDto } from './contracts';
 
 const accessTokenKey = 'sang_access_token';
 const isMockMode = import.meta.env.MODE === 'mock';
@@ -66,6 +66,18 @@ export const api = {
     return isMockMode
       ? (await import('./mockApi')).mockApi.queryUsers()
       : request<PagedResponse<UserDto>>('/api/users?pageIndex=1&pageSize=100');
+  },
+
+  async getProfile(): Promise<ApiResponse<UserDto>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.getProfile()
+      : request<UserDto>('/api/auth/profile');
+  },
+
+  async updateProfile(requestBody: UpdateProfileRequest): Promise<ApiResponse<UserDto>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.updateProfile(requestBody)
+      : request<UserDto>('/api/auth/profile', { method: 'PUT', body: JSON.stringify(requestBody) });
   },
 
   async queryRoles(): Promise<ApiResponse<PagedResponse<RoleDto>>> {

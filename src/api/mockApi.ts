@@ -5,6 +5,7 @@ import type {
   PagedResponse,
   ResourceDto,
   RoleDto,
+  UpdateProfileRequest,
   UserDto,
 } from './contracts';
 import { ALL_PERMISSIONS, DEFAULT_ROLES, DEFAULT_USERS } from '$mock';
@@ -29,13 +30,17 @@ const toUserDto = (user: (typeof DEFAULT_USERS)[number]): UserDto => ({
   email: user.email,
   emailConfirmed: true,
   phoneNumber: user.phone,
+  phoneNumberConfirmed: true,
+  bio: user.bio ?? null,
   lastLoginAt: user.lastLogin,
   isEnabled: user.status === 'active',
+  isAdministrator: Boolean(DEFAULT_ROLES.find(role => role.id === user.roleId)?.isAdministrator),
   roles: user.roleName ? [user.roleName] : [],
   permissions: DEFAULT_ROLES.find(role => role.id === user.roleId)?.permissions ?? [],
 });
 
 const users = DEFAULT_USERS.map(toUserDto);
+let currentUser: UserDto | null = null;
 const roles: RoleDto[] = DEFAULT_ROLES.map(role => ({
   id: Number(role.id.replace('role-', '').replace('superadmin', '1').replace('sysadmin', '2').replace('analyst', '3').replace('editor', '4').replace('guest', '5')),
   name: role.name,
@@ -70,10 +75,38 @@ export const mockApi = {
       return failure('用户名或密码错误');
     }
 
+    currentUser = user;
+
     return success({
       token: `mock-token-${user.id}`,
       expiration: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      user,
     });
+  },
+
+  getProfile(): ApiResponse<UserDto> {
+    if (!currentUser) {
+      const userId = localStorage.getItem('sang_access_token')?.replace('mock-token-', '');
+      currentUser = users.find(user => String(user.id) === userId) ?? null;
+    }
+    return currentUser ? success(currentUser) : failure('登录状态已失效');
+  },
+
+  updateProfile(request: UpdateProfileRequest): ApiResponse<UserDto> {
+    if (!currentUser) return failure('登录状态已失效');
+
+    const emailChanged = currentUser.email.toLowerCase() !== request.email.toLowerCase();
+    const phoneChanged = currentUser.phoneNumber !== request.phoneNumber;
+    currentUser = {
+      ...currentUser,
+      nickname: request.nickname,
+      email: request.email,
+      emailConfirmed: emailChanged ? false : currentUser.emailConfirmed,
+      phoneNumber: request.phoneNumber,
+      phoneNumberConfirmed: phoneChanged ? false : currentUser.phoneNumberConfirmed,
+      bio: request.bio,
+    };
+    return success(currentUser);
   },
 
   queryUsers(pageIndex = 1, pageSize = 10): ApiResponse<PagedResponse<UserDto>> {

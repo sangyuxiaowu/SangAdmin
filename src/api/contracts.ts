@@ -19,6 +19,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
   expiration: string;
+  user: UserDto;
 }
 
 export interface UserDto {
@@ -30,8 +31,10 @@ export interface UserDto {
   emailConfirmed: boolean;
   phoneNumber: string | null;
   phoneNumberConfirmed: boolean;
+  bio: string | null;
   lastLoginAt: string | null;
   isEnabled: boolean;
+  isAdministrator: boolean;
   roles: string[];
   permissions: string[];
 }
@@ -79,6 +82,13 @@ export interface UpdateUserRequest {
   isEnabled: boolean;
   roles: string[];
   permissions: string[];
+}
+
+export interface UpdateProfileRequest {
+  nickname: string;
+  email: string;
+  phoneNumber: string | null;
+  bio: string | null;
 }
 
 export interface CreateRoleRequest {

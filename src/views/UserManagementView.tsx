@@ -16,7 +16,10 @@ import {
   X,
   Key,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
@@ -306,6 +309,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-400 font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-4">用户信息</th>
+                <th className="py-3.5 px-4">联系方式</th>
                 <th className="py-3.5 px-4">部门 / 职位</th>
                 <th className="py-3.5 px-4">绑定权限角色</th>
                 <th className="py-3.5 px-4">状态</th>
@@ -316,6 +320,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {filteredUsers.map(user => {
                 const isActive = user.status === 'active';
+                const isCurrentUser = user.id === currentUser?.id;
                 return (
                   <tr
                     key={user.id}
@@ -328,14 +333,39 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                           alt={user.name || '用户'}
                           className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/20 shrink-0"
                         />
-                        <div>
+                        <div className="min-w-0">
                           <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             {user.name}
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              (@{user.username})
-                            </span>
+                            {isCurrentUser && (
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                                本人
+                              </span>
+                            )}
                           </div>
-                          <div className="text-[11px] text-slate-400">{user.email}</div>
+                          <div className="mt-0.5 text-[11px] text-slate-400 font-mono">@{user.username}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{user.email}</span>
+                          {user.emailConfirmed ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-label="邮箱已验证" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 text-amber-500" aria-label="邮箱未验证" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{user.phone || '未绑定手机'}</span>
+                          {user.phone && (user.phoneNumberConfirmed ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-label="手机号已验证" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 text-amber-500" aria-label="手机号未验证" />
+                          ))}
                         </div>
                       </div>
                     </td>
@@ -372,7 +402,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-1">
-                        {hasPermission('users.update') && (
+                        {isCurrentUser ? (
+                          <button
+                            onClick={() => onNavigate('/profile')}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
+                            title="前往个人中心"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        ) : hasPermission('users.update') && (
                           <>
                             <button
                               onClick={() => setEditingUser({ ...user })}
@@ -382,37 +420,33 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                               <Edit2 className="w-4 h-4" />
                             </button>
 
-                            {user.id !== currentUser?.id && (
-                              <button
-                                onClick={() => {
-                                  setCurrentPassword('');
-                                  setGeneratedPassword('');
-                                  setResetPassUser(user);
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
-                                title="重置安全密码"
-                              >
-                                <Key className="w-4 h-4" />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setCurrentPassword('');
+                                setGeneratedPassword('');
+                                setResetPassUser(user);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
+                              title="重置安全密码"
+                            >
+                              <Key className="w-4 h-4" />
+                            </button>
 
-                            {user.id !== currentUser?.id && (
-                              <button
-                                onClick={() => handleToggleStatus(user)}
-                                className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
-                                  isActive
-                                    ? 'text-slate-500 hover:text-rose-600'
-                                    : 'text-rose-500 hover:text-emerald-600'
-                                }`}
-                                title={isActive ? '冻结该账号' : '解封该账号'}
-                              >
-                                {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleToggleStatus(user)}
+                              className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                                isActive
+                                  ? 'text-slate-500 hover:text-rose-600'
+                                  : 'text-rose-500 hover:text-emerald-600'
+                              }`}
+                              title={isActive ? '冻结该账号' : '解封该账号'}
+                            >
+                              {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                            </button>
                           </>
                         )}
 
-                        {hasPermission('users.delete') && user.id !== currentUser?.id && (
+                        {hasPermission('users.delete') && !isCurrentUser && (
                           <button
                             onClick={() => handleDelete(user)}
                             className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 transition-colors"
@@ -654,10 +688,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                   <input
                     type="email"
                     required
-                    disabled={editingUser.emailConfirmed}
+                    readOnly={editingUser.emailConfirmed}
                     value={editingUser.email}
                     onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 read-only:cursor-default read-only:opacity-60"
                   />
                 </div>
                 <div>
@@ -667,11 +701,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                   </label>
                   <input
                     type="tel"
-                    disabled={editingUser.phoneNumberConfirmed}
+                    readOnly={editingUser.phoneNumberConfirmed}
                     value={editingUser.phone}
                     onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })}
                     placeholder="未绑定"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 read-only:cursor-default read-only:opacity-60"
                   />
                 </div>
               </div>
