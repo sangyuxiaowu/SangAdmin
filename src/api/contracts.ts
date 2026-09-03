@@ -71,15 +71,19 @@ export interface CreateUserRequest {
   phoneNumber: string | null;
   password: string;
   isEnabled: boolean;
-  roles: string[];
-  permissions: string[];
 }
 
 export interface UpdateUserRequest {
   nickname: string;
   email: string;
   phoneNumber: string | null;
+}
+
+export interface UpdateUserStatusRequest {
   isEnabled: boolean;
+}
+
+export interface UpdateUserAuthorizationRequest {
   roles: string[];
   permissions: string[];
 }

@@ -1,4 +1,4 @@
-import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateProfileRequest, UpdateRoleRequest, UpdateUserRequest, UserDto } from './contracts';
+import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateProfileRequest, UpdateRoleRequest, UpdateUserAuthorizationRequest, UpdateUserRequest, UpdateUserStatusRequest, UserDto } from './contracts';
 
 const accessTokenKey = 'sang_access_token';
 const isMockMode = import.meta.env.MODE === 'mock';
@@ -100,11 +100,26 @@ export const api = {
     return request<UserDto>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
   },
 
+  updateUserStatus(id: string, requestBody: UpdateUserStatusRequest): Promise<ApiResponse<UserDto>> {
+    return request<UserDto>(`/api/users/${id}/status`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+
+  updateUserAuthorization(id: string, requestBody: UpdateUserAuthorizationRequest): Promise<ApiResponse<UserDto>> {
+    return request<UserDto>(`/api/users/${id}/authorization`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+
   deleteUser(id: string): Promise<ApiResponse<object>> {
     return request<object>(`/api/users/${id}`, { method: 'DELETE' });
   },
 
-  changePassword(id: string, newPassword: string, currentPassword?: string): Promise<ApiResponse<object>> {
+  changeOwnPassword(newPassword: string, currentPassword: string): Promise<ApiResponse<object>> {
+    return request<object>('/api/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword, currentPassword }),
+    });
+  },
+
+  resetPassword(id: string, newPassword: string, currentPassword: string): Promise<ApiResponse<object>> {
     return request<object>(`/api/users/${id}/password`, {
       method: 'PUT',
       body: JSON.stringify({ newPassword, currentPassword }),

@@ -19,7 +19,9 @@ import {
   AlertTriangle,
   ExternalLink,
   Mail,
-  Phone
+  Phone,
+  Check,
+  Copy
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionContext';
 import { useAuth } from '../context/AuthContext';
@@ -41,7 +43,7 @@ const generatePassword = () => {
 };
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNavigate }) => {
-  const { users, roles, createUser, saveUser, removeUser, resetUserPassword } = usePermissions();
+  const { users, roles, createUser, saveUser, saveUserAuthorization, saveUserStatus, removeUser, resetUserPassword } = usePermissions();
   const { currentUser, hasPermission, addActivityLog } = useAuth();
   const { showAlert, showConfirm } = useModal();
 
@@ -55,6 +57,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   const [resetPassUser, setResetPassUser] = useState<User | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [generatedPassword, setGeneratedPassword] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   // Scroll lock when any modal is open
   useEffect(() => {
@@ -111,7 +115,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     }
 
     try {
-      await createUser(formData, formData.password);
+      await createUser(formData, formData.password, hasPermission('users.authorization'));
     } catch (error) {
       showAlert({ title: '创建失败', message: error instanceof Error ? error.message : '创建用户失败', type: 'danger' });
       return;
@@ -143,10 +147,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
   const handleSaveEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser || !hasPermission('users.update')) return;
+    if (!editingUser || (!hasPermission('users.update') && !hasPermission('users.authorization'))) return;
 
     try {
-      await saveUser(editingUser);
+      if (hasPermission('users.update')) {
+        await saveUser(editingUser);
+      }
+      if (hasPermission('users.authorization')) {
+        await saveUserAuthorization(editingUser);
+      }
     } catch (error) {
       showAlert({ title: '修改失败', message: error instanceof Error ? error.message : '修改用户失败', type: 'danger' });
       return;
@@ -170,7 +179,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       return;
     }
 
-    if (!hasPermission('users.update')) {
+    if (!hasPermission('users.status')) {
       showAlert({
         title: '权限不足',
         message: '权限不足：无法修改用户状态',
@@ -180,7 +189,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     }
     const newStatus: UserStatus = user.status === 'active' ? 'suspended' : 'active';
     try {
-      await saveUser({ ...user, status: newStatus });
+      await saveUserStatus({ ...user, status: newStatus });
     } catch (error) {
       showAlert({ title: '状态更新失败', message: error instanceof Error ? error.message : '更新用户状态失败', type: 'danger' });
       return;
@@ -268,6 +277,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
+            name="user-list-search"
+            autoComplete="off"
+            role="searchbox"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="按姓名、用户名、邮箱或部门搜索..."
@@ -358,15 +370,17 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                             <XCircle className="w-3.5 h-3.5 text-amber-500" aria-label="邮箱未验证" />
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{user.phone || '未绑定手机'}</span>
-                          {user.phone && (user.phoneNumberConfirmed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-label="手机号已验证" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5 text-amber-500" aria-label="手机号未验证" />
-                          ))}
-                        </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{user.phone}</span>
+                            {user.phoneNumberConfirmed ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-label="手机号已验证" />
+                            ) : (
+                              <XCircle className="w-3.5 h-3.5 text-amber-500" aria-label="手机号未验证" />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -410,39 +424,47 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>
-                        ) : hasPermission('users.update') && (
+                        ) : (
                           <>
-                            <button
-                              onClick={() => setEditingUser({ ...user })}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
-                              title="编辑角色信息"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            {(hasPermission('users.update') || hasPermission('users.authorization')) && (
+                              <button
+                                onClick={() => setEditingUser({ ...user })}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
+                                title="编辑用户信息"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
 
-                            <button
-                              onClick={() => {
-                                setCurrentPassword('');
-                                setGeneratedPassword('');
-                                setResetPassUser(user);
-                              }}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
-                              title="重置安全密码"
-                            >
-                              <Key className="w-4 h-4" />
-                            </button>
+                            {hasPermission('users.password') && (
+                              <button
+                                onClick={() => {
+                                  setCurrentPassword('');
+                                  setGeneratedPassword('');
+                                  setResetPasswordError('');
+                                  setPasswordCopied(false);
+                                  setResetPassUser(user);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
+                                title="重置安全密码"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
+                            )}
 
-                            <button
-                              onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
-                                isActive
-                                  ? 'text-slate-500 hover:text-rose-600'
-                                  : 'text-rose-500 hover:text-emerald-600'
-                              }`}
-                              title={isActive ? '冻结该账号' : '解封该账号'}
-                            >
-                              {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                            </button>
+                            {hasPermission('users.status') && (
+                              <button
+                                onClick={() => handleToggleStatus(user)}
+                                className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                                  isActive
+                                    ? 'text-slate-500 hover:text-rose-600'
+                                    : 'text-rose-500 hover:text-emerald-600'
+                                }`}
+                                title={isActive ? '冻结该账号' : '解封该账号'}
+                              >
+                                {isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                              </button>
+                            )}
                           </>
                         )}
 
@@ -589,7 +611,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
                   />
                 </div>
-                <div>
+                {hasPermission('users.authorization') && <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     分配角色模型 *
                   </label>
@@ -603,7 +625,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                       description: r.description
                     }))}
                   />
-                </div>
+                </div>}
               </div>
 
               <div className="flex justify-end space-x-2 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -651,7 +673,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
 
             <form onSubmit={handleSaveEditUser} className="space-y-4 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 text-xs flex flex-col justify-between">
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                {hasPermission('users.update') && <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     姓名
                   </label>
@@ -661,8 +683,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
                   />
-                </div>
-                <div>
+                </div>}
+                {hasPermission('users.authorization') && <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     分配角色
                   </label>
@@ -676,10 +698,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                       description: r.description
                     }))}
                   />
-                </div>
+                </div>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {hasPermission('users.update') && <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     <span>电子邮箱</span>
@@ -708,9 +730,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 read-only:cursor-default read-only:opacity-60"
                   />
                 </div>
-              </div>
+              </div>}
 
-              <div className="grid grid-cols-2 gap-3">
+              {hasPermission('users.update') && <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     所属部门
@@ -733,7 +755,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200"
                   />
                 </div>
-              </div>
+              </div>}
 
               <div className="flex justify-end space-x-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
@@ -762,10 +784,38 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
           onClick={() => setResetPassUser(null)}
         >
-          <div
+          <form
+            autoComplete="off"
             className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl text-center ring-1 ring-slate-900/10 dark:ring-slate-100/10 my-auto"
             onClick={e => e.stopPropagation()}
+            onSubmit={async e => {
+              e.preventDefault();
+              if (!currentPassword) {
+                setResetPasswordError('请输入当前登录用户密码。');
+                return;
+              }
+              setResetPasswordError('');
+              const password = generatePassword();
+              try {
+                await resetUserPassword(resetPassUser.id, password, currentPassword);
+              } catch (error) {
+                setResetPasswordError(error instanceof Error ? error.message : '重置密码失败');
+                return;
+              }
+              addActivityLog('重置密码', `已重置用户【${resetPassUser.name}】的登录密码`, 'warning');
+              setCurrentPassword('');
+              setGeneratedPassword(password);
+            }}
           >
+            <button
+              type="button"
+              onClick={() => setResetPassUser(null)}
+              className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+              aria-label="关闭重置密码弹窗"
+              title="关闭"
+            >
+              <X className="w-4 h-4" />
+            </button>
             <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-3">
               <Key className="w-6 h-6" />
             </div>
@@ -782,49 +832,55 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                   {generatedPassword}
                 </div>
                 <button
+                  type="button"
                   onClick={async () => {
                     await navigator.clipboard.writeText(generatedPassword);
-                    showAlert({ title: '已复制', message: '新密码已复制，请安全地交付给用户。', type: 'success' });
+                    setPasswordCopied(true);
+                    setTimeout(() => setPasswordCopied(false), 2000);
                   }}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md"
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md flex items-center justify-center gap-1.5"
                 >
-                  复制新密码
+                  {passwordCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>已复制</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>复制新密码</span>
+                    </>
+                  )}
                 </button>
               </>
             ) : (
               <>
                 <input
                   type="password"
-                  required
+                  name="password-reset-verification"
+                  autoComplete="new-password"
                   value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  placeholder="当前登录用户密码"
-                  className="w-full my-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-200"
-                />
-                <button
-                  onClick={async () => {
-                    if (!currentPassword) {
-                      showAlert({ title: '需要验证', message: '请输入当前登录用户密码。', type: 'warning' });
-                      return;
-                    }
-                    const password = generatePassword();
-                    try {
-                      await resetUserPassword(resetPassUser.id, password, currentPassword);
-                    } catch (error) {
-                      showAlert({ title: '重置失败', message: error instanceof Error ? error.message : '重置密码失败', type: 'danger' });
-                      return;
-                    }
-                    addActivityLog('重置密码', `已重置用户【${resetPassUser.name}】的登录密码`, 'warning');
-                    setCurrentPassword('');
-                    setGeneratedPassword(password);
+                  onChange={e => {
+                    setCurrentPassword(e.target.value);
+                    setResetPasswordError('');
                   }}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md"
+                  placeholder="当前登录用户密码"
+                  className="w-full mt-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-200"
+                />
+                {resetPasswordError && (
+                  <div className="mt-2 mb-4 text-left text-xs text-red-600 dark:text-red-400" role="alert" aria-live="polite">
+                    {resetPasswordError}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  className={`w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md ${resetPasswordError ? '' : 'mt-4'}`}
                 >
                   生成并重置密码
                 </button>
               </>
             )}
-          </div>
+          </form>
         </div>,
         document.body
       )}

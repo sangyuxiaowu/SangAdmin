@@ -16,9 +16,11 @@ interface PermissionContextType {
   saveRole: (role: Role) => Promise<void>;
   saveRoles: (roles: Role[]) => Promise<void>;
   addUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => void;
-  createUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string) => Promise<void>;
+  createUser: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string, assignRole: boolean) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => void;
   saveUser: (user: User) => Promise<void>;
+  saveUserAuthorization: (user: User) => Promise<void>;
+  saveUserStatus: (user: User) => Promise<void>;
   deleteUser: (id: string) => void;
   removeUser: (id: string) => Promise<void>;
   resetUserPassword: (id: string, password: string, currentPassword: string) => Promise<void>;
@@ -174,18 +176,26 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setUsers(prev => [newUser, ...prev]);
   };
 
-  const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'>, password: string) => {
+  const createUser = async (
+    userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'>,
+    password: string,
+    assignRole: boolean
+  ) => {
     const role = roles.find(item => item.id === userData.roleId);
-    await api.createUser({
+    const response = await api.createUser({
       userName: userData.username,
       nickname: userData.name,
       email: userData.email,
       phoneNumber: userData.phone.trim() || null,
       password,
       isEnabled: userData.status === 'active',
-      roles: role ? [role.code] : [],
-      permissions: [],
     });
+    if (assignRole && role) {
+      await api.updateUserAuthorization(String(response.data.id), {
+        roles: [role.code],
+        permissions: [],
+      });
+    }
     await reload();
   };
 
@@ -206,15 +216,25 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const saveUser = async (user: User) => {
-    const role = roles.find(item => item.id === user.roleId);
     await api.updateUser(user.id, {
       nickname: user.name,
       email: user.email,
       phoneNumber: user.phone.trim() || null,
-      isEnabled: user.status === 'active',
+    });
+    await reload();
+  };
+
+  const saveUserAuthorization = async (user: User) => {
+    const role = roles.find(item => item.id === user.roleId);
+    await api.updateUserAuthorization(user.id, {
       roles: role ? [role.code] : [],
       permissions: [],
     });
+    await reload();
+  };
+
+  const saveUserStatus = async (user: User) => {
+    await api.updateUserStatus(user.id, { isEnabled: user.status === 'active' });
     await reload();
   };
 
@@ -228,7 +248,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const resetUserPassword = async (id: string, password: string, currentPassword: string) => {
-    await api.changePassword(id, password, currentPassword);
+    await api.resetPassword(id, password, currentPassword);
   };
 
   const getRoleById = (id: string) => {
@@ -272,6 +292,8 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         createUser,
         updateUser,
         saveUser,
+        saveUserAuthorization,
+        saveUserStatus,
         deleteUser,
         removeUser,
         resetUserPassword,

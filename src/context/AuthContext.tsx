@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
     if (!currentUser) throw new Error('当前用户不存在');
-    await api.changePassword(currentUser.id, newPassword, currentPassword);
+    await api.changeOwnPassword(newPassword, currentPassword);
   };
 
   const switchDemoUser = (userId: string) => {

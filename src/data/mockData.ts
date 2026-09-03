@@ -40,7 +40,25 @@ export const ALL_PERMISSIONS: PermissionNode[] = [
   {
     code: 'users.update',
     name: '编辑用户',
-    description: '允许修改用户信息及分配角色',
+    description: '允许修改用户基本信息',
+    category: '用户管理'
+  },
+  {
+    code: 'users.status',
+    name: '更改用户状态',
+    description: '允许封禁或解封用户',
+    category: '用户管理'
+  },
+  {
+    code: 'users.authorization',
+    name: '更改用户授权',
+    description: '允许更改用户角色和直接权限',
+    category: '用户管理'
+  },
+  {
+    code: 'users.password',
+    name: '重置用户密码',
+    description: '允许重置其他用户密码',
     category: '用户管理'
   },
   {
