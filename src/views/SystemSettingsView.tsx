@@ -28,7 +28,7 @@ export const SystemSettingsView: React.FC<SystemSettingsViewProps> = ({ onNaviga
 
   const [maintenance, setMaintenance] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState('30');
-  const [passwordMinLength, setPasswordMinLength] = useState('8');
+  const [passwordMinLength, setPasswordMinLength] = useState('12');
   const [require2FA, setRequire2FA] = useState(true);
   const [apiRateLimit, setApiRateLimit] = useState('1000');
   const [logRetentionDays, setLogRetentionDays] = useState('90');
