@@ -24,6 +24,7 @@ export const AuthIpBanSection: React.FC = () => {
   const [banThresholdMinutes, setBanThresholdMinutes] = useState('10');
   const [maxAttempts, setMaxAttempts] = useState('10');
   const [autoBanMinutes, setAutoBanMinutes] = useState('60');
+  const [enableAccountLockout, setEnableAccountLockout] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
@@ -44,6 +45,7 @@ export const AuthIpBanSection: React.FC = () => {
         setBanThresholdMinutes(String(settingsResult.data.failureWindowMinutes));
         setMaxAttempts(String(settingsResult.data.maxAttempts));
         setAutoBanMinutes(String(settingsResult.data.autoBanMinutes));
+        setEnableAccountLockout(settingsResult.data.enableAccountLockout);
         setBannedIps(bansResult.data);
       } catch (error) {
         showAlert({
@@ -74,10 +76,12 @@ export const AuthIpBanSection: React.FC = () => {
         failureWindowMinutes,
         maxAttempts: attempts,
         autoBanMinutes: banMinutes,
+        enableAccountLockout,
       });
       setBanThresholdMinutes(String(result.data.failureWindowMinutes));
       setMaxAttempts(String(result.data.maxAttempts));
       setAutoBanMinutes(String(result.data.autoBanMinutes));
+      setEnableAccountLockout(result.data.enableAccountLockout);
       addActivityLog(
         '更新认证防爆破策略',
         `将登录尝试阈值调整为 ${failureWindowMinutes} 分钟内最多允许 ${attempts} 次试错`,
@@ -263,10 +267,27 @@ export const AuthIpBanSection: React.FC = () => {
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 font-semibold focus:border-indigo-600 focus:outline-none transition-all"
               />
               <p className="text-[11px] text-slate-400">
-                达到失败阈值后，账号和来源 IP 的禁止登录时长。
+                达到失败阈值后，来源 IP 的禁止登录时长。
               </p>
             </div>
           </div>
+
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableAccountLockout}
+              onChange={event => setEnableAccountLockout(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-indigo-600"
+            />
+            <span>
+              <span className="block font-bold text-slate-800 dark:text-slate-200">
+                同时封禁登录账号
+              </span>
+              <span className="mt-1 block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                默认关闭。开启后，同一用户名达到失败阈值也会被临时封禁；已知用户名可能被恶意尝试导致账号锁定。
+              </span>
+            </span>
+          </label>
 
           <div className="flex items-center justify-end pt-2">
             {hasPermission('auth-security.update') && (

@@ -112,6 +112,7 @@ export interface AuthSecuritySettings {
   failureWindowMinutes: number;
   maxAttempts: number;
   autoBanMinutes: number;
+  enableAccountLockout: boolean;
 }
 
 export interface AuthIpBanInfo {

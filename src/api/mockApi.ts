@@ -74,6 +74,7 @@ let authSecuritySettings: AuthSecuritySettings = {
   failureWindowMinutes: 10,
   maxAttempts: 10,
   autoBanMinutes: 60,
+  enableAccountLockout: false,
 };
 let authIpBans: AuthIpBanInfo[] = [];
 
