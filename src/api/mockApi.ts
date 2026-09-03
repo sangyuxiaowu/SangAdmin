@@ -1,5 +1,8 @@
 import type {
   ApiResponse,
+  AuthIpBanInfo,
+  AuthSecuritySettings,
+  BanIpRequest,
   LoginRequest,
   LoginResponse,
   PagedResponse,
@@ -67,6 +70,12 @@ const resources = Object.values(ALL_PERMISSIONS.reduce<Record<string, ResourceDt
   });
   return result;
 }, {}));
+let authSecuritySettings: AuthSecuritySettings = {
+  failureWindowMinutes: 10,
+  maxAttempts: 10,
+  autoBanMinutes: 60,
+};
+let authIpBans: AuthIpBanInfo[] = [];
 
 export const mockApi = {
   login(request: LoginRequest): ApiResponse<LoginResponse> {
@@ -129,5 +138,42 @@ export const mockApi = {
 
   getResources(): ApiResponse<ResourceDto[]> {
     return success(resources);
+  },
+
+  getAuthSecuritySettings(): ApiResponse<AuthSecuritySettings> {
+    return success(authSecuritySettings);
+  },
+
+  updateAuthSecuritySettings(settings: AuthSecuritySettings): ApiResponse<AuthSecuritySettings> {
+    authSecuritySettings = settings;
+    return success(authSecuritySettings);
+  },
+
+  getAuthIpBans(): ApiResponse<AuthIpBanInfo[]> {
+    return success(authIpBans);
+  },
+
+  banAuthIp(request: BanIpRequest): ApiResponse<AuthIpBanInfo> {
+    const item: AuthIpBanInfo = {
+      id: Date.now(),
+      ip: request.ip,
+      attempts: 0,
+      bannedUntil: new Date(Date.now() + request.durationMinutes * 60_000).toISOString(),
+      reason: request.reason,
+      isManual: true,
+    };
+    authIpBans = [item, ...authIpBans];
+    return success(item);
+  },
+
+  unbanAuthIp(id: number): ApiResponse<object> {
+    authIpBans = authIpBans.filter(item => item.id !== id);
+    return success({});
+  },
+
+  clearAuthIpBans(): ApiResponse<number> {
+    const count = authIpBans.length;
+    authIpBans = [];
+    return success(count);
   },
 };

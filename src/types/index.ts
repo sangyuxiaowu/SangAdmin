@@ -21,6 +21,11 @@ export type PermissionCode =
   | 'roles.update'
   | 'roles.delete'
   | 'permissions.read'
+  | 'auth-security.read'
+  | 'auth-security.update'
+  | 'auth-security.ban'
+  | 'auth-security.unban'
+  | 'auth-security.clear'
   | 'system:view'
   | 'system:config'
   | 'audit:view';
@@ -29,7 +34,7 @@ export interface PermissionNode {
   code: PermissionCode;
   name: string;
   description: string;
-  category: '仪表盘' | '数据分析' | '用户管理' | '机构管理' | '角色权限' | '系统配置' | '审计日志';
+  category: '仪表盘' | '数据分析' | '用户管理' | '机构管理' | '角色权限' | '认证安全' | '系统配置' | '审计日志';
   children?: PermissionNode[];
 }
 

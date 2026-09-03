@@ -112,7 +112,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       category: '页面导航',
       path: '/auth-security',
       icon: Ban,
-      permission: 'system:view'
+      permission: 'auth-security.read'
     },
     {
       id: 'nav-settings',

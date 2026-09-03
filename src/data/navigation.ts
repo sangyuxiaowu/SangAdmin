@@ -109,7 +109,7 @@ export const NAV_ITEMS: NavItem[] = [
         title: '认证与 IP 封禁',
         icon: 'Ban',
         path: '/auth-security',
-        permission: 'system:view'
+        permission: 'auth-security.read'
       },
       {
         id: 'settings',

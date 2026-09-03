@@ -1,74 +1,101 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Ban,
   ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
   Info,
   Plus,
   Trash2,
   Unlock,
   RefreshCw,
-  Zap,
   Save,
-  Check,
   Search,
-  RotateCcw,
-  X,
-  Lock
+  X
 } from 'lucide-react';
+import { api } from '../../../api/client';
+import type { AuthIpBanInfo } from '../../../api/contracts';
 import { useAuth } from '../../../context/AuthContext';
 import { useModal } from '../../../context/ModalContext';
-
-export interface BannedIpItem {
-  id: string;
-  ip: string;
-  attempts: number;
-  bannedUntil: string;
-  reason?: string;
-}
 
 export const AuthIpBanSection: React.FC = () => {
   const { hasPermission, addActivityLog } = useAuth();
   const { showAlert, showConfirm } = useModal();
 
-  // Settings state
   const [banThresholdMinutes, setBanThresholdMinutes] = useState('10');
   const [maxAttempts, setMaxAttempts] = useState('10');
+  const [autoBanMinutes, setAutoBanMinutes] = useState('60');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-
-  // IP Blocklist State
-  const [bannedIps, setBannedIps] = useState<BannedIpItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
+  const [bannedIps, setBannedIps] = useState<AuthIpBanInfo[]>([]);
   const [ipSearch, setIpSearch] = useState('');
-
-  // Add IP Modal State
   const [isAddIpModalOpen, setIsAddIpModalOpen] = useState(false);
   const [manualIp, setManualIp] = useState('');
   const [manualDurationMinutes, setManualDurationMinutes] = useState('60');
   const [manualReason, setManualReason] = useState('异常高频密码爆破试错');
 
-  // Save authentication settings
-  const handleSaveAuthSettings = (e: React.FormEvent) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [settingsResult, bansResult] = await Promise.all([
+          api.getAuthSecuritySettings(),
+          api.getAuthIpBans(),
+        ]);
+        setBanThresholdMinutes(String(settingsResult.data.failureWindowMinutes));
+        setMaxAttempts(String(settingsResult.data.maxAttempts));
+        setAutoBanMinutes(String(settingsResult.data.autoBanMinutes));
+        setBannedIps(bansResult.data);
+      } catch (error) {
+        showAlert({
+          title: '加载失败',
+          message: error instanceof Error ? error.message : '无法加载认证安全设置',
+          type: 'danger'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void load();
+  }, [showAlert]);
+
+  const handleSaveAuthSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    const failureWindowMinutes = Number(banThresholdMinutes);
+    const attempts = Number(maxAttempts);
+    const banMinutes = Number(autoBanMinutes);
+    if (![failureWindowMinutes, attempts, banMinutes].every(value => Number.isInteger(value) && value > 0)) {
+      showAlert({ title: '策略无效', message: '所有策略值都必须是正整数。', type: 'warning' });
+      return;
+    }
+
     setIsSavingSettings(true);
-    setTimeout(() => {
-      setIsSavingSettings(false);
+    try {
+      const result = await api.updateAuthSecuritySettings({
+        failureWindowMinutes,
+        maxAttempts: attempts,
+        autoBanMinutes: banMinutes,
+      });
+      setBanThresholdMinutes(String(result.data.failureWindowMinutes));
+      setMaxAttempts(String(result.data.maxAttempts));
+      setAutoBanMinutes(String(result.data.autoBanMinutes));
       addActivityLog(
         '更新认证防爆破策略',
-        `将登录尝试阈值调整为 ${banThresholdMinutes} 分钟内最多允许 ${maxAttempts} 次试错`,
+        `将登录尝试阈值调整为 ${failureWindowMinutes} 分钟内最多允许 ${attempts} 次试错`,
         'info'
       );
       showAlert({
         title: '策略已更新',
-        message: '认证安全阈值与防暴力破解策略已应用至全站网关防护层。',
+        message: '认证安全阈值与防暴力破解策略已生效。',
         type: 'success'
       });
-    }, 600);
+    } catch (error) {
+      showAlert({ title: '保存失败', message: error instanceof Error ? error.message : '无法保存认证安全策略', type: 'danger' });
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
-  // Add manual IP
-  const handleAddManualIp = () => {
+  const handleAddManualIp = async () => {
     const trimmed = manualIp.trim();
     if (!trimmed) {
       showAlert({
@@ -79,50 +106,49 @@ export const AuthIpBanSection: React.FC = () => {
       return;
     }
 
-    const duration = parseInt(manualDurationMinutes, 10) || 60;
-    const bannedUntilDate = new Date(Date.now() + duration * 60 * 1000);
-    const bannedUntilStr = bannedUntilDate.toISOString().replace('T', ' ').substring(0, 16);
+    const duration = Number(manualDurationMinutes);
+    if (!Number.isInteger(duration) || duration <= 0) {
+      showAlert({ title: '封禁时长无效', message: '封禁时长必须是正整数。', type: 'warning' });
+      return;
+    }
 
-    const newItem: BannedIpItem = {
-      id: `ban_${Date.now()}`,
-      ip: trimmed,
-      attempts: parseInt(maxAttempts, 10) || 10,
-      bannedUntil: bannedUntilStr,
-      reason: manualReason
-    };
-
-    setBannedIps(prev => [newItem, ...prev]);
-    setIsAddIpModalOpen(false);
-    setManualIp('');
-
-    addActivityLog('手动封禁 IP', `将恶意来源 IP「${trimmed}」封禁至 ${bannedUntilStr}`, 'warning');
-    showAlert({
-      title: '封禁成功',
-      message: `IP「${trimmed}」已被加入黑名单，禁止登录至 ${bannedUntilStr}。`,
-      type: 'success'
-    });
+    setIsMutating(true);
+    try {
+      const result = await api.banAuthIp({ ip: trimmed, durationMinutes: duration, reason: manualReason || null });
+      setBannedIps(prev => [result.data, ...prev.filter(item => item.id !== result.data.id)]);
+      setIsAddIpModalOpen(false);
+      setManualIp('');
+      addActivityLog('手动封禁 IP', `将恶意来源 IP「${result.data.ip}」加入登录黑名单`, 'warning');
+      showAlert({ title: '封禁成功', message: `IP「${result.data.ip}」已被加入黑名单。`, type: 'success' });
+    } catch (error) {
+      showAlert({ title: '封禁失败', message: error instanceof Error ? error.message : '无法封禁 IP', type: 'danger' });
+    } finally {
+      setIsMutating(false);
+    }
   };
 
-  // Unban IP
-  const handleUnbanIp = (item: BannedIpItem) => {
+  const handleUnbanIp = (item: AuthIpBanInfo) => {
     showConfirm({
       title: '解除 IP 封禁',
       message: `确定要立即为 IP 地址「${item.ip}」解除登录封禁限制吗？`,
       type: 'info',
       confirmText: '立即解封',
-      onConfirm: () => {
-        setBannedIps(prev => prev.filter(b => b.id !== item.id));
-        addActivityLog('解除 IP 封禁', `解除了 IP「${item.ip}」的登录封禁限制`, 'info');
-        showAlert({
-          title: '解封成功',
-          message: `IP「${item.ip}」已恢复正常登录权限。`,
-          type: 'success'
-        });
+      onConfirm: async () => {
+        setIsMutating(true);
+        try {
+          await api.unbanAuthIp(item.id);
+          setBannedIps(prev => prev.filter(ban => ban.id !== item.id));
+          addActivityLog('解除 IP 封禁', `解除了 IP「${item.ip}」的登录封禁限制`, 'info');
+          showAlert({ title: '解封成功', message: `IP「${item.ip}」已恢复正常登录权限。`, type: 'success' });
+        } catch (error) {
+          showAlert({ title: '解封失败', message: error instanceof Error ? error.message : '无法解除 IP 封禁', type: 'danger' });
+        } finally {
+          setIsMutating(false);
+        }
       }
     });
   };
 
-  // Clear all banned IPs
   const handleClearAllBanned = () => {
     if (bannedIps.length === 0) return;
     showConfirm({
@@ -130,50 +156,29 @@ export const AuthIpBanSection: React.FC = () => {
       message: '确定要清空当前所有被禁止登录的 IP 黑名单记录吗？',
       type: 'danger',
       confirmText: '确认清空',
-      onConfirm: () => {
-        setBannedIps([]);
-        addActivityLog('清空 IP 黑名单', '清空了全部处于封禁状态的 IP 列表', 'warning');
-        showAlert({
-          title: '已全部清空',
-          message: '所有受限制的 IP 已全部解封。',
-          type: 'info'
-        });
+      onConfirm: async () => {
+        setIsMutating(true);
+        try {
+          await api.clearAuthIpBans();
+          setBannedIps([]);
+          addActivityLog('清空 IP 黑名单', '清空了全部处于封禁状态的 IP 列表', 'warning');
+          showAlert({ title: '已全部清空', message: '所有受限制的 IP 已全部解封。', type: 'info' });
+        } catch (error) {
+          showAlert({ title: '清空失败', message: error instanceof Error ? error.message : '无法清空 IP 封禁', type: 'danger' });
+        } finally {
+          setIsMutating(false);
+        }
       }
     });
   };
 
-  // Simulate Attack for testing
-  const handleSimulateBruteForceAttack = () => {
-    const randomOctet = Math.floor(Math.random() * 200) + 20;
-    const attackIp = `198.51.${randomOctet}.${Math.floor(Math.random() * 250) + 1}`;
-    const bannedUntilDate = new Date(
-      Date.now() + (parseInt(banThresholdMinutes, 10) || 10) * 60 * 1000
-    );
-    const bannedUntilStr = bannedUntilDate.toISOString().replace('T', ' ').substring(0, 16);
-
-    const newAttackItem: BannedIpItem = {
-      id: `ban_${Date.now()}`,
-      ip: attackIp,
-      attempts: (parseInt(maxAttempts, 10) || 10) + 2,
-      bannedUntil: bannedUntilStr,
-      reason: '系统自动拦截：短时间内触发连续多次错误密码碰撞'
-    };
-
-    setBannedIps(prev => [newAttackItem, ...prev]);
-    addActivityLog('自动防御告警', `网关侦测到高频密码试错，已自动封禁异常 IP「${attackIp}」`, 'danger');
-    showAlert({
-      title: '已触发防爆破自动拦截',
-      message: `检测到来源 IP「${attackIp}」密码错误达阈值，系统已自动将其加入封禁列表（禁止至 ${bannedUntilStr}）。`,
-      type: 'warning'
-    });
-  };
-
-  // Filtered list
   const filteredIps = bannedIps.filter(
     item =>
       item.ip.toLowerCase().includes(ipSearch.toLowerCase()) ||
       (item.reason && item.reason.toLowerCase().includes(ipSearch.toLowerCase()))
   );
+
+  const formatDateTime = (value: string) => new Date(value).toLocaleString('zh-CN', { hour12: false });
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -204,7 +209,7 @@ export const AuthIpBanSection: React.FC = () => {
         </div>
 
         <form onSubmit={handleSaveAuthSettings} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs sm:text-sm">
             {/* 禁止阈值 (分钟) */}
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-800 dark:text-slate-200">
@@ -244,22 +249,27 @@ export const AuthIpBanSection: React.FC = () => {
                 时间窗口内允许的最大密码输错次数，超出后立即触发网关级 IP 封禁。
               </p>
             </div>
+
+            <div className="space-y-1.5">
+              <label className="block font-bold text-slate-800 dark:text-slate-200">
+                自动封禁时长（分钟）
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="43200"
+                value={autoBanMinutes}
+                onChange={e => setAutoBanMinutes(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 font-semibold focus:border-indigo-600 focus:outline-none transition-all"
+              />
+              <p className="text-[11px] text-slate-400">
+                达到失败阈值后，账号和来源 IP 的禁止登录时长。
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={handleSimulateBruteForceAttack}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-xs font-semibold transition-all"
-                title="模拟一个高频失败请求触发自动封禁"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>模拟异常攻击触发拦截</span>
-              </button>
-            </div>
-
-            {hasPermission('system:config') && (
+          <div className="flex items-center justify-end pt-2">
+            {hasPermission('auth-security.update') && (
               <button
                 type="submit"
                 disabled={isSavingSettings}
@@ -302,17 +312,21 @@ export const AuthIpBanSection: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsAddIpModalOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>手动封禁 IP</span>
-            </button>
-            {bannedIps.length > 0 && (
+            {hasPermission('auth-security.ban') && (
+              <button
+                onClick={() => setIsAddIpModalOpen(true)}
+                disabled={isMutating || isLoading}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-50"
+              >
+                <Plus className="w-4 h-4" />
+                <span>手动封禁 IP</span>
+              </button>
+            )}
+            {bannedIps.length > 0 && hasPermission('auth-security.clear') && (
               <button
                 onClick={handleClearAllBanned}
-                className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-600 dark:text-slate-300 hover:text-rose-600 text-xs font-semibold transition-all"
+                disabled={isMutating}
+                className="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-600 dark:text-slate-300 hover:text-rose-600 text-xs font-semibold transition-all disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>清空列表</span>
@@ -347,7 +361,7 @@ export const AuthIpBanSection: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredIps.length === 0 ? (
+              {isLoading || filteredIps.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-12 px-4 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -355,10 +369,12 @@ export const AuthIpBanSection: React.FC = () => {
                         <Ban className="w-6 h-6 stroke-1" />
                       </div>
                       <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        暂无数据
+                        {isLoading ? '正在加载' : '暂无数据'}
                       </div>
                       <p className="text-xs text-slate-400 max-w-sm">
-                        {ipSearch
+                        {isLoading
+                          ? '正在读取服务器上的有效封禁记录。'
+                          : ipSearch
                           ? '没有匹配搜索条件的封禁记录。'
                           : '当前没有任何 IP 处于禁止登录状态，全站登录网关运行健康。'}
                       </p>
@@ -389,16 +405,19 @@ export const AuthIpBanSection: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-xs text-slate-600 dark:text-slate-300">
-                      {item.bannedUntil}
+                      {formatDateTime(item.bannedUntil)}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleUnbanIp(item)}
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 font-semibold text-xs transition-colors"
-                      >
-                        <Unlock className="w-3.5 h-3.5" />
-                        <span>解除封禁</span>
-                      </button>
+                      {hasPermission('auth-security.unban') && (
+                        <button
+                          onClick={() => handleUnbanIp(item)}
+                          disabled={isMutating}
+                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 font-semibold text-xs transition-colors disabled:opacity-50"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>解除封禁</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -411,7 +430,7 @@ export const AuthIpBanSection: React.FC = () => {
       {/* ============================================================ */}
       {/* MODAL: MANUAL BAN IP MODAL */}
       {/* ============================================================ */}
-      {isAddIpModalOpen &&
+      {isAddIpModalOpen && hasPermission('auth-security.ban') &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
@@ -494,7 +513,8 @@ export const AuthIpBanSection: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddManualIp}
-                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center space-x-1.5"
+                    disabled={isMutating}
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center space-x-1.5 disabled:opacity-50"
                   >
                     <Ban className="w-4 h-4" />
                     <span>执行封禁</span>

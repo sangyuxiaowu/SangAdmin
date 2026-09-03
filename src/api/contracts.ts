@@ -107,3 +107,24 @@ export interface UpdateRoleRequest {
   description: string;
   permissions: string[];
 }
+
+export interface AuthSecuritySettings {
+  failureWindowMinutes: number;
+  maxAttempts: number;
+  autoBanMinutes: number;
+}
+
+export interface AuthIpBanInfo {
+  id: number;
+  ip: string;
+  attempts: number;
+  bannedUntil: string;
+  reason: string | null;
+  isManual: boolean;
+}
+
+export interface BanIpRequest {
+  ip: string;
+  durationMinutes: number;
+  reason: string | null;
+}

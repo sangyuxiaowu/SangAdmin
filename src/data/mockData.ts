@@ -110,6 +110,36 @@ export const ALL_PERMISSIONS: PermissionNode[] = [
     category: '角色权限'
   },
   {
+    code: 'auth-security.read',
+    name: '查看认证安全',
+    description: '允许查看认证安全策略和 IP 封禁记录',
+    category: '认证安全'
+  },
+  {
+    code: 'auth-security.update',
+    name: '更新认证安全',
+    description: '允许修改登录失败窗口和自动封禁策略',
+    category: '认证安全'
+  },
+  {
+    code: 'auth-security.ban',
+    name: '封禁 IP',
+    description: '允许手动封禁 IP 地址',
+    category: '认证安全'
+  },
+  {
+    code: 'auth-security.unban',
+    name: '解除 IP 封禁',
+    description: '允许解除指定 IP 地址的封禁',
+    category: '认证安全'
+  },
+  {
+    code: 'auth-security.clear',
+    name: '清空 IP 封禁',
+    description: '允许清空全部有效 IP 封禁',
+    category: '认证安全'
+  },
+  {
     code: 'system:view',
     name: '查看系统配置',
     description: '允许查看全局运行参数',
@@ -155,6 +185,8 @@ export const DEFAULT_ROLES: Role[] = [
       'users.read', 'users.create', 'users.update', 'users.delete',
       'org:view', 'org:manage',
       'roles.read',
+      'auth-security.read', 'auth-security.update', 'auth-security.ban',
+      'auth-security.unban', 'auth-security.clear',
       'system:view', 'system:config', 'audit:view'
     ]
   },

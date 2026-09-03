@@ -1,4 +1,4 @@
-import type { ApiResponse, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateProfileRequest, UpdateRoleRequest, UpdateUserAuthorizationRequest, UpdateUserRequest, UpdateUserStatusRequest, UserDto } from './contracts';
+import type { ApiResponse, AuthIpBanInfo, AuthSecuritySettings, BanIpRequest, CreateRoleRequest, CreateUserRequest, LoginRequest, LoginResponse, PagedResponse, ResourceDto, RoleDto, UpdateProfileRequest, UpdateRoleRequest, UpdateUserAuthorizationRequest, UpdateUserRequest, UpdateUserStatusRequest, UserDto } from './contracts';
 
 const accessTokenKey = 'sang_access_token';
 const isMockMode = import.meta.env.MODE === 'mock';
@@ -90,6 +90,48 @@ export const api = {
     return isMockMode
       ? (await import('./mockApi')).mockApi.getResources()
       : request<ResourceDto[]>('/api/permissions/resources');
+  },
+
+  async getAuthSecuritySettings(): Promise<ApiResponse<AuthSecuritySettings>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.getAuthSecuritySettings()
+      : request<AuthSecuritySettings>('/api/auth-security/settings');
+  },
+
+  async updateAuthSecuritySettings(requestBody: AuthSecuritySettings): Promise<ApiResponse<AuthSecuritySettings>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.updateAuthSecuritySettings(requestBody)
+      : request<AuthSecuritySettings>('/api/auth-security/settings', {
+          method: 'PUT',
+          body: JSON.stringify(requestBody),
+        });
+  },
+
+  async getAuthIpBans(): Promise<ApiResponse<AuthIpBanInfo[]>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.getAuthIpBans()
+      : request<AuthIpBanInfo[]>('/api/auth-security/ip-bans');
+  },
+
+  async banAuthIp(requestBody: BanIpRequest): Promise<ApiResponse<AuthIpBanInfo>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.banAuthIp(requestBody)
+      : request<AuthIpBanInfo>('/api/auth-security/ip-bans', {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        });
+  },
+
+  async unbanAuthIp(id: number): Promise<ApiResponse<object>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.unbanAuthIp(id)
+      : request<object>(`/api/auth-security/ip-bans/${id}`, { method: 'DELETE' });
+  },
+
+  async clearAuthIpBans(): Promise<ApiResponse<number>> {
+    return isMockMode
+      ? (await import('./mockApi')).mockApi.clearAuthIpBans()
+      : request<number>('/api/auth-security/ip-bans', { method: 'DELETE' });
   },
 
   createUser(requestBody: CreateUserRequest): Promise<ApiResponse<UserDto>> {

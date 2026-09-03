@@ -11,7 +11,7 @@ interface AuthSecurityViewProps {
 export const AuthSecurityView: React.FC<AuthSecurityViewProps> = ({ onNavigate }) => {
   const { hasPermission } = useAuth();
 
-  if (!hasPermission('system:view')) {
+  if (!hasPermission('auth-security.read')) {
     return <AccessDeniedView onBack={() => onNavigate?.('/dashboard')} />;
   }
 
