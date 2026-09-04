@@ -6,7 +6,6 @@ import {
   Smartphone,
   Mail,
   Building,
-  CheckCircle2,
   Save,
   Lock,
   Camera,
@@ -22,7 +21,7 @@ import { TwoFactorAuthSection } from '../components/business/security/TwoFactorA
 import { DEFAULT_AVATAR } from '../utils';
 
 export const ProfileView: React.FC = () => {
-  const { currentUser, updateProfile, changePassword, addActivityLog } = useAuth();
+  const { currentUser, updateProfile, changePassword } = useAuth();
   const { mode, setMode } = useTheme();
   const { showAlert } = useModal();
 
@@ -59,8 +58,6 @@ export const ProfileView: React.FC = () => {
     newPass: '',
     confirm: ''
   });
-
-  const [passSuccess, setPassSuccess] = useState(false);
 
   const avatarPresets = [
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
@@ -113,10 +110,6 @@ export const ProfileView: React.FC = () => {
       showAlert({ title: '修改失败', message: error instanceof Error ? error.message : '修改密码失败', type: 'danger' });
       return;
     }
-    addActivityLog('修改密码', '完成了个人账户登录安全密钥更新', 'success');
-    setPassSuccess(true);
-    setPasswords({ current: '', newPass: '', confirm: '' });
-    setTimeout(() => setPassSuccess(false), 3000);
   };
 
   return (
@@ -301,13 +294,6 @@ export const ProfileView: React.FC = () => {
               <Key className="w-4 h-4 text-indigo-500" />
               修改系统登录密码
             </h3>
-
-            {passSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                密码修改成功！下次登录请使用新密码。
-              </div>
-            )}
 
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">

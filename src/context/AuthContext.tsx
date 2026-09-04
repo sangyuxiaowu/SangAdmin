@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, PermissionCode, ActivityLog } from '../types';
 import { usePermissions } from './PermissionContext';
+import { useModal } from './ModalContext';
 import { MOCK_ACTIVITY_LOGS } from '$mock';
-import { api, clearAccessToken, getAccessToken } from '../api/client';
+import { api, authSessionExpiredEvent, clearAccessToken, getAccessToken } from '../api/client';
 import type { UserDto } from '../api/contracts';
 import { DEFAULT_AVATAR } from '../utils';
 
@@ -22,7 +23,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, getRolePermissions, updateUser } = usePermissions();
+  const { users, getRolePermissions, updateUser, reload } = usePermissions();
+  const { showAlert } = useModal();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
@@ -38,6 +40,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return MOCK_ACTIVITY_LOGS;
   });
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setCurrentUser(null);
+      setCurrentPermissions([]);
+      showAlert({
+        title: '会话已失效',
+        message: '登录会话已过期，请重新登录。',
+        type: 'warning',
+        confirmText: '重新登录',
+      });
+    };
+
+    window.addEventListener(authSessionExpiredEvent, handleSessionExpired);
+    return () => window.removeEventListener(authSessionExpiredEvent, handleSessionExpired);
+  }, [showAlert]);
 
   const applyCurrentUser = (user: UserDto) => {
     let mappedUser: User;
@@ -90,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (accountInput: string, password: string): Promise<boolean> => {
     try {
       const result = await api.login({ userName: accountInput.trim(), password });
+      await reload();
       applyCurrentUser(result.data.user);
       return true;
     } catch {
@@ -109,6 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const changePassword = async (currentPassword: string, newPassword: string) => {
     if (!currentUser) throw new Error('当前用户不存在');
     await api.changeOwnPassword(newPassword, currentPassword);
+    addActivityLog('修改密码', '完成了个人账户登录安全密钥更新', 'success');
+    clearAccessToken();
+    setCurrentUser(null);
+    setCurrentPermissions([]);
+    showAlert({
+      title: '密码修改成功',
+      message: '登录凭据已更新，请使用新密码重新登录。',
+      type: 'success',
+      confirmText: '重新登录',
+    });
   };
 
   const switchDemoUser = (userId: string) => {

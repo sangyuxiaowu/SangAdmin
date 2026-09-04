@@ -2,6 +2,9 @@ import type { ApiResponse, AuthIpBanInfo, AuthSecuritySettings, BanIpRequest, Cr
 
 const accessTokenKey = 'sang_access_token';
 const isMockMode = import.meta.env.MODE === 'mock';
+let isSessionExpirationPending = false;
+
+export const authSessionExpiredEvent = 'sang:auth-session-expired';
 
 export const getAccessToken = () => localStorage.getItem(accessTokenKey);
 export const clearAccessToken = () => localStorage.removeItem(accessTokenKey);
@@ -23,7 +26,7 @@ const getErrorMessage = (response: ErrorResponse, status: number) => {
   return validationErrors?.length ? validationErrors.join('\n') : response.msg || `请求失败（${status}）`;
 };
 
-const request = async <T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> => {
+const request = async <T>(path: string, init?: RequestInit, handleUnauthorized = true): Promise<ApiResponse<T>> => {
   const token = getAccessToken();
   const response = await fetch(path, {
     ...init,
@@ -35,6 +38,12 @@ const request = async <T>(path: string, init?: RequestInit): Promise<ApiResponse
   });
 
   if (!response.ok) {
+    const isCurrentSession = token ? getAccessToken() === token : !getAccessToken();
+    if (response.status === 401 && handleUnauthorized && isCurrentSession && !isSessionExpirationPending) {
+      isSessionExpirationPending = true;
+      clearAccessToken();
+      window.setTimeout(() => window.dispatchEvent(new Event(authSessionExpiredEvent)), 0);
+    }
     const error = await response.json().catch(() => ({})) as ErrorResponse;
     throw new Error(getErrorMessage(error, response.status));
   }
@@ -54,10 +63,11 @@ export const api = {
       : await request<LoginResponse>('/api/auth/login', {
           method: 'POST',
           body: JSON.stringify(requestBody),
-        });
+        }, false);
 
     if (result.code === 0) {
       localStorage.setItem(accessTokenKey, result.data.token);
+      isSessionExpirationPending = false;
     }
     return result;
   },

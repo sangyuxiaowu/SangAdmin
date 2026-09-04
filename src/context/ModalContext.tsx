@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -50,7 +50,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     onCancel?: () => void;
   } | null>(null);
 
-  const showAlert = (options: AlertOptions) => {
+  const showAlert = useCallback((options: AlertOptions) => {
     setModalState({
       isOpen: true,
       mode: 'alert',
@@ -61,9 +61,9 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cancelText: '',
       onConfirm: options.onConfirm
     });
-  };
+  }, []);
 
-  const showConfirm = (options: ConfirmOptions) => {
+  const showConfirm = useCallback((options: ConfirmOptions) => {
     setModalState({
       isOpen: true,
       mode: 'confirm',
@@ -75,11 +75,11 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       onConfirm: options.onConfirm,
       onCancel: options.onCancel
     });
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModalState(null);
-  };
+  }, []);
 
   const handleConfirm = () => {
     if (modalState?.onConfirm) {

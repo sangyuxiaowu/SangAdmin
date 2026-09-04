@@ -12,14 +12,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('nova_theme_mode');
+    const saved = localStorage.getItem('sang_theme_mode');
     return (saved as ThemeMode) || 'system';
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    localStorage.setItem('nova_theme_mode', mode);
+    localStorage.setItem('sang_theme_mode', mode);
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
