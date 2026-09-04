@@ -248,7 +248,7 @@ export const OrgManagementView: React.FC<OrgManagementViewProps> = ({ onNavigate
         leaderAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
         leaderTitle: `${formName} 负责人`,
         phone: formPhone || '021-88880000',
-        email: formEmail || 'dept@nova.com',
+        email: formEmail || 'dept@sang.cool',
         status: formStatus,
         orderNum: formOrderNum,
         memberCount: 0,
@@ -1104,7 +1104,7 @@ export const OrgManagementView: React.FC<OrgManagementViewProps> = ({ onNavigate
                       type="email"
                       value={formEmail}
                       onChange={e => setFormEmail(e.target.value)}
-                      placeholder="dept@nova.com"
+                      placeholder="dept@sang.cool"
                       className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>

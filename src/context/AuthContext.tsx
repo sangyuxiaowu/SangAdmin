@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentPermissions, setCurrentPermissions] = useState<string[]>([]);
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
-    const saved = localStorage.getItem('sang_logs') || localStorage.getItem('nova_logs');
+    const saved = localStorage.getItem('sang_logs');
     if (saved) {
       try {
         return JSON.parse(saved);

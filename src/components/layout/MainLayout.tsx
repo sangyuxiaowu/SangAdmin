@@ -116,7 +116,7 @@ export const MainLayout: React.FC = () => {
         {/* Footer */}
         <footer className="px-6 py-4 border-t border-slate-200/60 dark:border-slate-800/60 text-xs text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-2">
           <div>
-            © 2026 NovaAdmin Enterprise Platform. 保留所有权利。
+            © 2026 SangAdmin Enterprise Platform. 保留所有权利。
           </div>
           <div className="flex items-center space-x-4">
             <span className="hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">

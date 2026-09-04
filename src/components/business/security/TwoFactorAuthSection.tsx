@@ -550,7 +550,7 @@ export const TwoFactorAuthSection: React.FC = () => {
 
               <div className="text-center">
                 <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                  {currentUser?.email || 'admin@nova.com'}
+                  {currentUser?.email || 'admin@sang.cool'}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
                   兼容 Google Authenticator / 微软验证器 / 1Password / 微信小程序
@@ -578,7 +578,7 @@ export const TwoFactorAuthSection: React.FC = () => {
                   <div className="space-y-1">
                     <div className="text-slate-400">账户名 / Account</div>
                     <div className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {currentUser?.email || 'admin@nova.com'}
+                      {currentUser?.email || 'admin@sang.cool'}
                     </div>
                   </div>
 

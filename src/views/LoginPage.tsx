@@ -18,9 +18,10 @@ import { useTheme } from '../context/ThemeContext';
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { toggleTheme, effectiveTheme } = useTheme();
+  const isMockMode = import.meta.env.MODE === 'mock';
 
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin888');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,31 +75,32 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Demo Credentials Bar */}
-        <div className="mb-6 p-3.5 rounded-2xl bg-slate-100/80 border border-slate-200/80 dark:bg-slate-950/60 dark:border-slate-800 text-left">
-          <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
-            <span>演示快捷账号 (点击快速填入):</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+        {isMockMode && (
+          <div className="mb-6 p-3.5 rounded-2xl bg-slate-100/80 border border-slate-200/80 dark:bg-slate-950/60 dark:border-slate-800 text-left">
+            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 flex items-center justify-between">
+              <span>演示快捷账号 (点击快速填入):</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              {[
+                { label: '超级管理员', user: 'admin', color: 'border-indigo-200 text-indigo-700 dark:border-indigo-500/40 dark:text-indigo-300' },
+                { label: '系统运维官', user: 'lin.yu', color: 'border-cyan-200 text-cyan-700 dark:border-cyan-500/40 dark:text-cyan-300' },
+                { label: '数据分析师', user: 'chen.ming', color: 'border-emerald-200 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-300' },
+                { label: '运营编辑官', user: 'zhang.wei', color: 'border-amber-200 text-amber-700 dark:border-amber-500/40 dark:text-amber-300' }
+              ].map(item => (
+                <button
+                  key={item.user}
+                  type="button"
+                  onClick={() => handleQuickSelect(item.user)}
+                  className={`px-2.5 py-1.5 rounded-xl border bg-white hover:bg-slate-50 dark:bg-slate-900/60 dark:hover:bg-slate-800 transition-colors flex items-center justify-between text-left ${item.color}`}
+                >
+                  <span className="font-medium text-[11px]">{item.label}</span>
+                  <span className="text-[10px] opacity-75 font-mono">@{item.user}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-1.5 text-xs">
-            {[
-              { label: '超级管理员', user: 'admin', color: 'border-indigo-200 text-indigo-700 dark:border-indigo-500/40 dark:text-indigo-300' },
-              { label: '系统运维官', user: 'lin.yu', color: 'border-cyan-200 text-cyan-700 dark:border-cyan-500/40 dark:text-cyan-300' },
-              { label: '数据分析师', user: 'chen.ming', color: 'border-emerald-200 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-300' },
-              { label: '运营编辑官', user: 'zhang.wei', color: 'border-amber-200 text-amber-700 dark:border-amber-500/40 dark:text-amber-300' }
-            ].map(item => (
-              <button
-                key={item.user}
-                type="button"
-                onClick={() => handleQuickSelect(item.user)}
-                className={`px-2.5 py-1.5 rounded-xl border bg-white hover:bg-slate-50 dark:bg-slate-900/60 dark:hover:bg-slate-800 transition-colors flex items-center justify-between text-left ${item.color}`}
-              >
-                <span className="font-medium text-[11px]">{item.label}</span>
-                <span className="text-[10px] opacity-75 font-mono">@{item.user}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -36,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate
 }) => {
   const { mode, setMode, effectiveTheme } = useTheme();
-  const { currentUser, logout, switchDemoUser, hasPermission } = useAuth();
+  const { currentUser, logout, hasPermission } = useAuth();
   const { showConfirm, showAlert } = useModal();
 
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
@@ -312,49 +312,6 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>权限树矩阵分配</span>
                   </button>
                 )}
-              </div>
-
-              {/* Quick Role Toggle Bar in menu */}
-              <div className="p-2 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-                <div className="text-[10px] text-slate-400 mb-1 px-1">快速演示身份切换:</div>
-                <div className="grid grid-cols-2 gap-1 text-[10px]">
-                  <button
-                    onClick={() => {
-                      switchDemoUser('usr-1');
-                      setUserMenuOpen(false);
-                    }}
-                    className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-500 text-center truncate"
-                  >
-                    超级管理员
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchDemoUser('usr-3');
-                      setUserMenuOpen(false);
-                    }}
-                    className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-500 text-center truncate"
-                  >
-                    数据分析师
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchDemoUser('usr-4');
-                      setUserMenuOpen(false);
-                    }}
-                    className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-500 text-center truncate"
-                  >
-                    运营编辑
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchDemoUser('usr-5');
-                      setUserMenuOpen(false);
-                    }}
-                    className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-500 text-center truncate"
-                  >
-                    访客体验员
-                  </button>
-                </div>
               </div>
 
               <div className="p-1 border-t border-slate-100 dark:border-slate-800/80">

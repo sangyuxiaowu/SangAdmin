@@ -15,8 +15,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  ShieldAlert,
-  LogOut,
   Layers,
   ListOrdered,
   TableProperties,
@@ -29,7 +27,6 @@ import {
 import { NAV_ITEMS } from '../../data/navigation';
 import { useAuth } from '../../context/AuthContext';
 import type { NavItem } from '../../types';
-import { DEFAULT_AVATAR } from '../../utils';
 
 interface SidebarProps {
   currentPath: string;
@@ -69,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onCloseMobile
 }) => {
-  const { currentUser, hasPermission, logout, switchDemoUser } = useAuth();
+  const { hasPermission } = useAuth();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     'rbac-group': true,
     'system-group': false
@@ -283,64 +280,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {NAV_ITEMS.map(item => renderNavItem(item))}
         </div>
 
-        {/* User Status / Quick Switch Section */}
-        <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
-          {!collapsed ? (
-            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <img
-                    src={currentUser?.avatar || DEFAULT_AVATAR}
-                    alt={currentUser?.name || '用户头像'}
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/30"
-                  />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                      {currentUser?.name}
-                    </div>
-                    <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium truncate flex items-center gap-1">
-                      <ShieldAlert className="w-3 h-3 inline" />
-                      {currentUser?.roleName}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={logout}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                  title="退出登录"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Demo Role Switcher Dropdown inside sidebar */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
-                <div className="text-[10px] text-slate-400 mb-1">演示权限体验（一键切换身份）:</div>
-                <select
-                  value={currentUser?.id}
-                  onChange={e => switchDemoUser(e.target.value)}
-                  className="w-full text-xs bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="usr-1">陆天行 (超级管理员)</option>
-                  <option value="usr-2">林雨晴 (系统运维官)</option>
-                  <option value="usr-3">陈明哲 (数据分析师)</option>
-                  <option value="usr-4">张薇薇 (运营编辑官)</option>
-                  <option value="usr-5">体验账号 (访客体验员)</option>
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <img
-                src={currentUser?.avatar || DEFAULT_AVATAR}
-                alt={currentUser?.name || '用户头像'}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/30"
-                title={`${currentUser?.name || ''} (${currentUser?.roleName || ''})`}
-              />
-            </div>
-          )}
-        </div>
       </aside>
 
       {/* Collapsed Sidebar Floating Submenu Popover Portal */}
